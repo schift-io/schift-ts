@@ -1231,19 +1231,19 @@ register(
   descriptor({
     name: BlockType.EMBEDDER,
     displayName: "Embedder",
-    description: "Embed text with schift-embed-1 (Qwen3-VL-Embedding-2B 1024d).",
+    description: "Embed text with schift-embed-1-small (Qwen3-VL-Embedding-2B 1024d).",
     icon: "node:embedder",
     iconColor: "#06b6d4",
     group: ["transform"],
     codex: {
       categories: [Category.RAG],
       subcategories: { [Category.RAG]: ["Search"] },
-      alias: ["embed", "vectorize", "embedding", "schift-embed-1"],
+      alias: ["embed", "vectorize", "embedding", "schift-embed-1-small"],
     },
     inputs: [mainPort()],
     outputs: [sidecarPort(ConnectionTypes.RagEmbedding), mainPort()],
     properties: [
-      { displayName: "Model", name: "model", type: "string", default: "schift-embed-1" },
+      { displayName: "Model", name: "model", type: "string", default: "schift-embed-1-small" },
     ],
   }),
 );
@@ -1601,6 +1601,77 @@ register(
         default: "// Item input is `$input`. Return an object or array.\nreturn $input;",
         typeOptions: { rows: 10, editor: "codeNodeEditor", editorLanguage: "javascript" },
         required: true,
+      },
+    ],
+    parameterPane: "wide",
+  }),
+);
+
+register(
+  descriptor({
+    name: BlockType.SOURCE_QUERY,
+    displayName: "Source Query",
+    description: "Read rows from a registered external Postgres source.",
+    icon: "node:database-search",
+    iconColor: "#2563eb",
+    group: ["transform"],
+    codex: {
+      categories: [Category.DataStorage, Category.RAG],
+      subcategories: { [Category.RAG]: ["Search"] },
+      alias: ["source", "postgres", "sql", "query", "read", "database"],
+    },
+    inputs: [mainPort()],
+    outputs: [mainPort()],
+    properties: [
+      { displayName: "Source ID", name: "source_id", type: "string", default: "", required: true },
+      {
+        displayName: "Query",
+        name: "query",
+        type: "string",
+        default: "SELECT * FROM table_name LIMIT 100",
+        required: true,
+        typeOptions: { rows: 6, editor: "codeNodeEditor", editorLanguage: "sql" },
+      },
+      { displayName: "Limit", name: "limit", type: "number", default: 100 },
+    ],
+    parameterPane: "wide",
+  }),
+);
+
+register(
+  descriptor({
+    name: BlockType.SOURCE_WRITE,
+    displayName: "Source Write",
+    description: "Write rows to a registered external Postgres source.",
+    icon: "node:database-write",
+    iconColor: "#7c3aed",
+    group: ["output"],
+    codex: {
+      categories: [Category.DataStorage],
+      alias: ["source", "postgres", "sql", "write", "insert", "update", "database"],
+    },
+    inputs: [mainPort()],
+    outputs: [mainPort()],
+    properties: [
+      { displayName: "Source ID", name: "source_id", type: "string", default: "", required: true },
+      {
+        displayName: "Operation",
+        name: "op_type",
+        type: "options",
+        default: "insert",
+        options: [
+          { name: "Insert", value: "insert" },
+          { name: "Update", value: "update" },
+        ],
+      },
+      { displayName: "Schema", name: "schema_name", type: "string", default: "public" },
+      { displayName: "Table", name: "table_name", type: "string", default: "", required: true },
+      {
+        displayName: "Primary Key",
+        name: "primary_key",
+        type: "string",
+        default: "",
+        description: "Required for update operations.",
       },
     ],
     parameterPane: "wide",

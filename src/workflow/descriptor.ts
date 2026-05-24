@@ -166,7 +166,7 @@ export type NodeGroup = "trigger" | "transform" | "input" | "output" | "schedule
  * The complete metadata + UI schema for one block type.
  * Equivalent to n8n's `INodeTypeDescription` minus runtime concerns.
  *
- * Execution lives separately in the node handler classes (sdk/ts/src/workflow/nodes/).
+ * Execution lives separately in the node handler classes (clients/sdk/ts/src/workflow/nodes/).
  * Descriptors are pure data and can be serialized to JSON for backend / Studio UI.
  */
 export interface INodeDescriptor {

@@ -558,7 +558,8 @@ describe("Tier 3 server-only stubs", () => {
   const serverOnlyTypes = [
     "document_loader", "document_parser", "chunker", "code",
     "http_request", "webhook", "webhook_source", "ingest_bridge",
-    "feed_poll", "ai_router",
+    "feed_poll", "ai_router", "rag", "source_query", "source_write",
+    "subworkflow", "outbound_webhook",
   ];
 
   it.each(serverOnlyTypes)("%s raises server-only error", async (blockType) => {
@@ -746,7 +747,7 @@ describe("Error handling", () => {
     const mockClient = {
       embed: async (...args: unknown[]) => {
         calls.push(args);
-        return { values: [0.1, 0.2], model: "schift-embed-1" };
+        return { values: [0.1, 0.2], model: "schift-embed-1-small" };
       },
     };
     const def = makeDef(
@@ -755,7 +756,7 @@ describe("Error handling", () => {
         {
           id: "emb",
           type: "embedder",
-          config: { model: "schift-embed-1", dimensions: 128 },
+          config: { model: "schift-embed-1-small", dimensions: 128 },
         },
       ],
       [{ source: "start", target: "emb" }],
@@ -765,7 +766,7 @@ describe("Error handling", () => {
 
     expect(result.status).toBe("completed");
     expect(calls).toEqual([
-      ["hello", { model: "schift-embed-1", dimensions: 128 }],
+      ["hello", { model: "schift-embed-1-small", dimensions: 128 }],
     ]);
   });
 
@@ -783,7 +784,7 @@ describe("Error handling", () => {
         {
           id: "emb",
           type: "embedder",
-          config: { model: "schift-embed-1", dimensions: 128 },
+          config: { model: "schift-embed-1-small", dimensions: 128 },
         },
       ],
       [{ source: "start", target: "emb" }],
@@ -793,7 +794,7 @@ describe("Error handling", () => {
 
     expect(result.status).toBe("completed");
     expect(calls).toEqual([
-      [["a", "b"], { model: "schift-embed-1", dimensions: 128 }],
+      [["a", "b"], { model: "schift-embed-1-small", dimensions: 128 }],
     ]);
   });
 
@@ -804,7 +805,7 @@ describe("Error handling", () => {
         {
           id: "emb",
           type: "embedder",
-          config: { model: "schift-embed-1", d: 128 },
+          config: { model: "schift-embed-1-small", d: 128 },
         },
       ],
       [{ source: "start", target: "emb" }],

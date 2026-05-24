@@ -5,8 +5,8 @@ export type Modality = "text" | "image" | "audio" | "video" | "document";
  * Matches the model_id field returned by GET /v1/catalog.
  */
 export type EmbedModelId =
-  | "schift-embed-1"
-  | "schift-embed-1-preview"
+  | "schift-embed-1-small"
+  | "schift-embed-1-small"
   | "openai/text-embedding-3-small"
   | "openai/text-embedding-3-large"
   | "google/gemini-embedding-001"
@@ -47,6 +47,69 @@ export interface SchiftConfig {
   apiKey: string;
   baseUrl?: string;
   timeout?: number;
+}
+
+export interface SchiftAuthConfig {
+  baseUrl?: string;
+  timeout?: number;
+}
+
+export interface AuthSignupRequest {
+  email: string;
+  password: string;
+  name?: string;
+  orgName?: string;
+  region?: "seoul" | "tokyo" | (string & {});
+}
+
+export interface AuthLoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string;
+  onboarded: boolean;
+}
+
+export interface AuthOrg {
+  id: string;
+  name: string;
+  slug: string;
+  tier: string;
+  region: string;
+  role: string;
+}
+
+export interface AuthPendingInvite {
+  token: string;
+  orgName: string;
+  orgSlug: string;
+  role: string;
+  email: string;
+}
+
+export interface AuthSignupResponse {
+  user: AuthUser;
+  org?: AuthOrg;
+  orgs?: AuthOrg[];
+  token: string;
+  is_new_user?: boolean;
+}
+
+export interface AuthLoginResponse {
+  user?: AuthUser;
+  orgs?: AuthOrg[];
+  token?: string;
+  requires_2fa?: boolean;
+}
+
+export interface AuthMeResponse {
+  user: AuthUser;
+  orgs: AuthOrg[];
+  pendingInvites: AuthPendingInvite[];
 }
 
 export interface EmbedRequest {
@@ -98,6 +161,59 @@ export interface EmbedImageResponse {
   usage: {
     image_count: number;
   };
+}
+
+export type PiiType =
+  | "resident_id"
+  | "alien_registration"
+  | "passport"
+  | "driver_license"
+  | "address"
+  | "phone"
+  | "bank_account";
+
+export type PiiTokenFormat = "label_index" | "pii_type_index";
+
+export interface PiiRedactRequest {
+  text: string;
+  scoreThreshold?: number;
+  scope?: "broad" | "core-seven";
+  types?: PiiType[];
+  tokenFormat?: PiiTokenFormat;
+  returnMode?: "entities" | "masked" | "both";
+}
+
+export interface PiiEntity {
+  label: string;
+  start: number;
+  end: number;
+  score: number;
+  word: string;
+}
+
+export interface PiiRedactResponse {
+  request_id: string;
+  profile: string;
+  scope: "broad" | "core-seven";
+  types?: PiiType[] | null;
+  token_format?: PiiTokenFormat | null;
+  entities?: PiiEntity[] | null;
+  masked?: string | null;
+  reverse_map?: Record<string, string> | null;
+  elapsed_ms: number;
+  cached: boolean;
+}
+
+export interface PiiRestoreRequest {
+  text: string;
+  reverseMap: Record<string, string>;
+}
+
+export interface PiiRestoreResponse {
+  request_id: string;
+  restored: string;
+  replaced: number;
+  missing_tokens: string[];
 }
 
 export type TemporalType = "before" | "after" | "between" | "as_of" | "latest";

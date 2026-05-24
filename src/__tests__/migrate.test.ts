@@ -46,51 +46,75 @@ describe("MigrateClient", () => {
     expect(String(url)).toBe("https://api.schift.io/v1/migrate/feasibility");
     expect(init?.method).toBe("POST");
     const body = JSON.parse(String(init?.body));
-    // Default target_model="schift-embed-1" must be injected.
-    expect(body.target_model).toBe("schift-embed-1");
+    // Default target_model="schift-embed-1-small" must be injected.
+    expect(body.target_model).toBe("schift-embed-1-small");
     expect(body.source_model).toBe("text-embedding-3-large");
     expect(body.source_vectors).toEqual([[0.1, 0.2]]);
   });
 
-  it("quote() POSTs /v1/migrate/quote with retain_on_cloud default true", async () => {
+  it("quote() POSTs /v1/migrate/quote with token/profile contract", async () => {
     const mockFetch = vi.fn(async () =>
       ok({
-        n_total_vectors: 50_000,
-        src_dim: 1536,
-        retain_on_cloud: true,
-        rate_per_million_cents: 10,
-        quote_cents: 50,
-        quote_usd: 0.5,
-        free_tier: true,
+        tier: "starter_trial",
+        trial_plan: "starter",
+        trial_months: 1,
+        customer_price_usd: 0,
+        vendor_full_cost_usd: 0.13,
+        card_required: true,
+        contact_sales: false,
+        savings_vs_vendor_direct_usd: 0.13,
+        source_profile: "vector_store",
+        pipeline: "vector_projection",
+        ocr_required: false,
+        messaging: "Starter trial migration",
       }),
     );
     globalThis.fetch = mockFetch as typeof fetch;
 
     const client = new Schift({ apiKey: "sch_test" });
     const resp = await client.migrate.quote({
-      source: { kind: "pgvector", config: { dsn: "postgres://x", table: "t" } },
+      n_tokens: 1_000_000,
+      source_profile: "vector_store",
     });
 
-    expect(resp.free_tier).toBe(true);
+    expect(resp.contact_sales).toBe(false);
     const [url, init] = mockFetch.mock.calls[0]!;
     expect(String(url)).toBe("https://api.schift.io/v1/migrate/quote");
     expect(init?.method).toBe("POST");
     const body = JSON.parse(String(init?.body));
-    expect(body.retain_on_cloud).toBe(true);
-    expect(body.source).toEqual({
-      kind: "pgvector",
-      config: { dsn: "postgres://x", table: "t" },
-    });
+    expect(body.sla_tier).toBe("std");
+    expect(body.n_tokens).toBe(1_000_000);
+    expect(body.source_profile).toBe("vector_store");
+    expect(body.source).toBeUndefined();
   });
 
-  it("start() POSTs /v1/migrate/start with method=ridge default", async () => {
+  it("start() POSTs /v1/migrate/start with runtime-valid token/profile contract", async () => {
     const mockFetch = vi.fn(async () =>
       ok({
         job_id: "job_123",
         state: "queued",
-        quote_cents: 0,
-        free_tier: true,
+        tier: "starter_trial",
+        trial_plan: "starter",
+        trial_months: 1,
+        customer_price_usd: 0,
+        card_required: true,
         requires_payment: false,
+        checkout_url: null,
+        quote: {
+          tier: "starter_trial",
+          trial_plan: "starter",
+          trial_months: 1,
+          customer_price_usd: 0,
+          vendor_full_cost_usd: 0.13,
+          card_required: true,
+          contact_sales: false,
+          savings_vs_vendor_direct_usd: 0.13,
+          source_profile: "obsidian_vault",
+          pipeline: "knowledge_import",
+          ocr_required: false,
+          messaging: "Obsidian vault migration",
+        },
+        messaging: "Obsidian vault migration",
       }),
     );
     globalThis.fetch = mockFetch as typeof fetch;
@@ -99,6 +123,8 @@ describe("MigrateClient", () => {
     const resp = await client.migrate.start({
       source: { kind: "chroma", config: { url: "http://x" } },
       target_collection_id: "col_x",
+      n_tokens: 1_000_000,
+      source_profile: "obsidian_vault",
     });
 
     expect(resp.job_id).toBe("job_123");
@@ -108,7 +134,10 @@ describe("MigrateClient", () => {
     const body = JSON.parse(String(init?.body));
     expect(body.method).toBe("ridge");
     expect(body.retain_on_cloud).toBe(true);
+    expect(body.sla_tier).toBe("std");
     expect(body.target_collection_id).toBe("col_x");
+    expect(body.n_tokens).toBe(1_000_000);
+    expect(body.source_profile).toBe("obsidian_vault");
   });
 
   it("status() GETs /v1/migrate/{jobId}", async () => {
@@ -149,6 +178,8 @@ describe("MigrateClient", () => {
       client.migrate.start({
         source: { kind: "pinecone", config: {} },
         target_collection_id: "col_y",
+        n_tokens: 10_000_000_000,
+        source_profile: "vector_store",
       }),
     ).rejects.toBeInstanceOf(QuotaError);
   });

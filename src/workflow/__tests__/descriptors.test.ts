@@ -29,6 +29,14 @@ describe("descriptor registry", () => {
     expect(getDescriptor(BlockType.REMOVE_DUPLICATES)).toBeDefined();
     expect(getDescriptor(BlockType.SCHEDULE_TRIGGER)).toBeDefined();
     expect(getDescriptor(BlockType.WAIT)).toBeDefined();
+    expect(getDescriptor(BlockType.SOURCE_QUERY)).toBeDefined();
+    expect(getDescriptor(BlockType.SOURCE_WRITE)).toBeDefined();
+  });
+
+  it("has a descriptor for every BlockType", () => {
+    for (const type of Object.values(BlockType)) {
+      expect(getDescriptor(type), `${type} missing descriptor`).toBeDefined();
+    }
   });
 
   it("returns undefined for unknown types", () => {

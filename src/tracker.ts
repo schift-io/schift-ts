@@ -81,6 +81,7 @@ export class TokenTracker {
    * Recognises:
    * - `{usage: {prompt_tokens, completion_tokens}}` (OpenAI-style)
    * - `{usage: {input_tokens, output_tokens}}` (Anthropic-style)
+   * - OpenAI-shaped embeddings responses with `data[].embedding`
    * - `{usage: {total_tokens}}` (embed/rerank fallback → embed_tokens)
    *
    * Bodies without a `usage` field still increment `call_count`.
@@ -92,6 +93,12 @@ export class TokenTracker {
     if (!usage || typeof usage !== "object") return;
 
     const u = usage as Record<string, unknown>;
+    if (isEmbeddingResponse(body as Record<string, unknown>)) {
+      const total = numeric(u.total_tokens) ?? numeric(u.prompt_tokens) ?? 0;
+      if (total) this.addUsage("embed_tokens", total);
+      return;
+    }
+
     const promptTokens = numeric(u.prompt_tokens) ?? numeric(u.input_tokens) ?? 0;
     const completionTokens =
       numeric(u.completion_tokens) ?? numeric(u.output_tokens) ?? 0;
@@ -134,6 +141,16 @@ export class TokenTracker {
 function numeric(v: unknown): number | null {
   if (typeof v === "number" && Number.isFinite(v)) return v;
   return null;
+}
+
+function isEmbeddingResponse(body: Record<string, unknown>): boolean {
+  const data = body.data;
+  return Array.isArray(data) && data.some(
+    (item) =>
+      !!item &&
+      typeof item === "object" &&
+      Array.isArray((item as Record<string, unknown>).embedding),
+  );
 }
 
 // ---- active-tracker plumbing ----

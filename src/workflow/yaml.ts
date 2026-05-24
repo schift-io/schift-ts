@@ -162,11 +162,15 @@ export function validateDefinition(
     }
   }
 
-  // Server-only (Tier 3) warnings
+  // Server-only (Tier 3) warnings. These are official workflow block types,
+  // but the local SDK runner cannot execute them without the API runtime.
   const TIER3_TYPES = new Set([
     "webhook_source", "ingest_bridge", "feed_poll", "notify",
     "webhook", "http_request", "document_loader", "document_parser",
-    "chunker", "code", "ai_router",
+    "chunker", "code", "ai_router", "rag", "source_query", "source_write",
+    "set", "filter", "switch", "aggregate", "sort", "limit",
+    "split_out", "summarize", "remove_duplicates", "datetime", "wait",
+    "schedule_trigger", "manual_trigger", "subworkflow", "outbound_webhook",
   ]);
   for (const b of definition.blocks) {
     if (TIER3_TYPES.has(b.type)) {

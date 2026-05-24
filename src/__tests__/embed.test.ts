@@ -15,7 +15,7 @@ describe("Schift client embed → /v1/embeddings", () => {
         JSON.stringify({
           object: "list",
           data: [{ object: "embedding", index: 0, embedding: [0.1, 0.2, 0.3] }],
-          model: "schift-embed-1",
+          model: "schift-embed-1-small",
           usage: { prompt_tokens: 4, total_tokens: 4 },
         }),
         { status: 200, headers: { "Content-Type": "application/json" } },
@@ -24,7 +24,7 @@ describe("Schift client embed → /v1/embeddings", () => {
     globalThis.fetch = mockFetch as typeof fetch;
 
     const client = new Schift({ apiKey: "sch_test" });
-    const out = await client.embed({ text: "hello", model: "schift-embed-1" });
+    const out = await client.embed({ text: "hello", model: "schift-embed-1-small" });
 
     expect(mockFetch).toHaveBeenCalledWith(
       "https://api.schift.io/v1/embeddings",
@@ -35,7 +35,7 @@ describe("Schift client embed → /v1/embeddings", () => {
     );
     expect(out).toEqual({
       embedding: [0.1, 0.2, 0.3],
-      model: "schift-embed-1",
+      model: "schift-embed-1-small",
       dimensions: 3,
       usage: { tokens: 4 },
     });
@@ -50,7 +50,7 @@ describe("Schift client embed → /v1/embeddings", () => {
             { object: "embedding", index: 1, embedding: [0.4, 0.5] },
             { object: "embedding", index: 0, embedding: [0.1, 0.2] },
           ],
-          model: "schift-embed-1",
+          model: "schift-embed-1-small",
           usage: { prompt_tokens: 7, total_tokens: 7 },
         }),
         { status: 200, headers: { "Content-Type": "application/json" } },

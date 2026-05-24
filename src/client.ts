@@ -12,6 +12,10 @@ import type {
   EmbedBatchResponse,
   EmbedImageRequest,
   EmbedImageResponse,
+  PiiRedactRequest,
+  PiiRedactResponse,
+  PiiRestoreRequest,
+  PiiRestoreResponse,
   SearchRequest,
   SearchResult,
   ProjectRequest,
@@ -28,10 +32,21 @@ import type {
   AggregateResponse,
   BucketContextRequest,
   BucketContextResponse,
+  SchiftAuthConfig,
+  AuthSignupRequest,
+  AuthSignupResponse,
+  AuthLoginRequest,
+  AuthLoginResponse,
+  AuthMeResponse,
 } from "./types.js";
 import { _recordResponseInActiveTracker } from "./tracker.js";
 import { WorkflowClient } from "./workflow/client.js";
 import type { HttpTransport } from "./workflow/client.js";
+import {
+  SchiftWorkflowArtifact,
+  workflow as createWorkflowArtifact,
+} from "./workflow-v2/index.js";
+import type { WorkflowV2ArtifactInput } from "./workflow-v2/index.js";
 import { AgentsClient } from "./agents/client.js";
 import { ProvidersClient } from "./providers/client.js";
 import { MigrateClient } from "./migrate/client.js";
@@ -72,6 +87,82 @@ function unwrapBatch(raw: OpenAIEmbeddingsResponse): EmbedBatchResponse {
   };
 }
 
+export class SchiftAuth {
+  private readonly baseUrl: string;
+  private readonly timeout: number;
+
+  constructor(config: SchiftAuthConfig = {}) {
+    this.baseUrl = (config.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
+    this.timeout = config.timeout ?? DEFAULT_TIMEOUT;
+  }
+
+  async signup(request: AuthSignupRequest): Promise<AuthSignupResponse> {
+    return this.post<AuthSignupResponse>("/v1/auth/signup", {
+      email: request.email,
+      password: request.password,
+      name: request.name ?? "",
+      org_name: request.orgName,
+      region: request.region ?? "seoul",
+    });
+  }
+
+  async login(request: AuthLoginRequest): Promise<AuthLoginResponse> {
+    return this.post<AuthLoginResponse>("/v1/auth/login", {
+      email: request.email,
+      password: request.password,
+    });
+  }
+
+  async me(token: string): Promise<AuthMeResponse> {
+    const resp = await fetch(`${this.baseUrl}/v1/auth/me`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+        "User-Agent": `schift-ts/${VERSION}`,
+      },
+      signal: AbortSignal.timeout(this.timeout),
+    });
+    return this.handleResponse<AuthMeResponse>(resp);
+  }
+
+  async health(): Promise<{ status: string; checks?: Record<string, unknown> }> {
+    const resp = await fetch(`${this.baseUrl}/health`, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        "User-Agent": `schift-ts/${VERSION}`,
+      },
+      signal: AbortSignal.timeout(this.timeout),
+    });
+    return this.handleResponse(resp);
+  }
+
+  private async post<T>(
+    path: string,
+    body: Record<string, unknown>,
+  ): Promise<T> {
+    const resp = await fetch(`${this.baseUrl}${path}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": `schift-ts/${VERSION}`,
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(this.timeout),
+    });
+    return this.handleResponse<T>(resp);
+  }
+
+  private async handleResponse<T>(resp: Response): Promise<T> {
+    if (!resp.ok) {
+      const text = await resp.text().catch(() => "");
+      throw new SchiftError(`Auth API error ${resp.status}: ${text}`, resp.status);
+    }
+    return (await resp.json()) as T;
+  }
+}
+
 export class Schift {
   private readonly apiKey: string;
   private readonly baseUrl: string;
@@ -87,6 +178,17 @@ export class Schift {
    * ```
    */
   readonly workflows: WorkflowClient;
+
+  /**
+   * Lightweight Workflow v2 artifact factory.
+   *
+   * Framework adapters are intentionally not bundled into the core SDK. Use
+   * separate packages such as `@schift-io/workflow-vercel-ai` to project this
+   * artifact into a specific execution SDK.
+   */
+  workflow(input: WorkflowV2ArtifactInput): SchiftWorkflowArtifact {
+    return createWorkflowArtifact(input);
+  }
 
   /**
    * Managed Agents sub-client — create agents, start runs, stream events.
@@ -184,7 +286,7 @@ export class Schift {
 
   /**
    * Migration client — vectors-in migration (pgvector / chroma / pinecone /
-   * weaviate → schift-embed-1 hub).
+   * weaviate → schift-embed-1-small hub).
    *
    * @example
    * ```ts
@@ -205,6 +307,9 @@ export class Schift {
    * ```
    */
   readonly transport: HttpTransport;
+  static auth(config: SchiftAuthConfig = {}): SchiftAuth {
+    return new SchiftAuth(config);
+  }
 
   constructor(config: SchiftConfig) {
     if (!config.apiKey?.startsWith("sch_")) {
@@ -316,12 +421,50 @@ export class Schift {
     return unwrapBatch(raw);
   }
 
-  /** Embed images (base64-encoded). Requires a vision-capable model (e.g. schift-embed-1). */
+  /** Embed images (base64-encoded). Requires a vision-capable model (e.g. schift-embed-1-small). */
   async embedImages(request: EmbedImageRequest): Promise<EmbedImageResponse> {
     return this.post("/v1/embed/image", {
       images: request.images,
       model: request.model,
       dimensions: request.dimensions,
+    });
+  }
+
+  // ---- PII redaction ----
+
+  /** Redact Korean PII before sending text to an LLM, vector DB, or fine-tuning job. */
+  async redactPii(request: PiiRedactRequest): Promise<PiiRedactResponse> {
+    return this.post<PiiRedactResponse>("/v1/pii/redact", {
+      text: request.text,
+      score_threshold: request.scoreThreshold ?? 0.5,
+      scope: request.scope ?? "broad",
+      types: request.types,
+      token_format: request.tokenFormat ?? "pii_type_index",
+      return: request.returnMode ?? "both",
+    });
+  }
+
+  /** Convenience helper that returns only the masked text. */
+  async mask(
+    text: string,
+    options?: Omit<PiiRedactRequest, "text" | "returnMode">,
+  ): Promise<string> {
+    const response = await this.redactPii({
+      text,
+      scoreThreshold: options?.scoreThreshold,
+      scope: options?.scope,
+      types: options?.types,
+      tokenFormat: options?.tokenFormat,
+      returnMode: "masked",
+    });
+    return response.masked ?? text;
+  }
+
+  /** Restore text from reversible PII tokens using a caller-held reverse map. */
+  async restorePii(request: PiiRestoreRequest): Promise<PiiRestoreResponse> {
+    return this.post<PiiRestoreResponse>("/v1/pii/restore", {
+      text: request.text,
+      reverse_map: request.reverseMap,
     });
   }
 

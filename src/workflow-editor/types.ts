@@ -177,7 +177,7 @@ export function getBlockTypeDef(type: string): BlockTypeDefinition | undefined {
 
 // ---- Alias map (n8n-derived) for palette search ----
 // Hardcoded locally to keep workflow-editor standalone-importable.
-// Source: docs/research/n8n-catalog-mapping.md Section 6 + sdk/ts/src/workflow/descriptors.ts.
+// Source: docs/research/n8n-catalog-mapping.md Section 6 + clients/sdk/ts/src/workflow/descriptors.ts.
 
 export const BLOCK_ALIASES: Record<string, string[]> = {
   // Control / Trigger
@@ -191,7 +191,7 @@ export const BLOCK_ALIASES: Record<string, string[]> = {
   document_parser: ["parse", "pdf", "docx", "html", "ocr"],
   chunker: ["split", "chunk", "tokenize", "segment", "text-splitter"],
   // Embedding
-  embedder: ["embed", "vectorize", "embedding", "schift-embed-1"],
+  embedder: ["embed", "vectorize", "embedding", "schift-embed-1-small"],
   model_selector: ["router", "model-router", "cost", "quality"],
   // Storage
   vector_store: ["vectorstore", "engine", "schift-engine", "qdrant", "pinecone"],

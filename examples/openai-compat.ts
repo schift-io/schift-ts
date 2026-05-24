@@ -10,7 +10,7 @@
  *   export SCHIFT_API_KEY=sch_xxx
  *
  * Run:
- *   npx tsx sdk/ts/examples/openai-compat.ts
+ *   npx tsx clients/sdk/ts/examples/openai-compat.ts
  *
  * Optional override:
  *   SCHIFT_BASE_URL=http://localhost:8000/v1/openai npx tsx ...

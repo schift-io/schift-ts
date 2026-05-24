@@ -80,6 +80,19 @@ import {
 
 // ---- Tier 2: Agent (ReAct) ----
 import { AIAgentNode } from "./ai-agent.js";
+import {
+  WorkflowV2WebhookNode,
+  WorkflowV2OutboundWebhookNode,
+  WorkflowV2SourceQueryNode,
+  WorkflowV2SourceWriteNode,
+  WorkflowV2MetadataStoreNode,
+  WorkflowV2HttpRequestNode,
+  WorkflowV2SecretReadNode,
+  WorkflowV2SubworkflowNode,
+  WorkflowV2HumanApprovalNode,
+  WorkflowV2HumanFormNode,
+  WorkflowV2WaitNode,
+} from "./v2-runtime.js";
 
 // ---- Registry ----
 
@@ -100,6 +113,7 @@ const BUILTIN_HANDLERS: Record<string, new (block: BlockDef) => SDKBaseNode> = {
   answer: AnswerNode,
   field_selector: FieldSelectorNode,
   model_selector: ModelSelectorNode,
+  rag: ServerOnlyNode,
   // Tier 2 -- Schift API
   embedder: EmbedderNode,
   retriever: RetrieverNode,
@@ -123,6 +137,8 @@ const BUILTIN_HANDLERS: Record<string, new (block: BlockDef) => SDKBaseNode> = {
   ingest_bridge: ServerOnlyNode,
   feed_poll: ServerOnlyNode,
   notify: PassthroughNode,
+  source_query: ServerOnlyNode,
+  source_write: ServerOnlyNode,
   // Tier 1 -- n8n-derived helpers
   set: SetNode,
   filter: FilterNode,
@@ -140,8 +156,24 @@ const BUILTIN_HANDLERS: Record<string, new (block: BlockDef) => SDKBaseNode> = {
   human_approval: HumanApprovalNode,
   human_form: HumanFormNode,
   decision_review: DecisionReviewNode,
+  subworkflow: ServerOnlyNode,
+  outbound_webhook: ServerOnlyNode,
   // Tier 2 -- Agent (ReAct loop)
   ai_agent: AIAgentNode,
+  // Workflow v2 local runtime middleware shims. These are only emitted by the
+  // Workflow v2 artifact runner, so v1 server-only block semantics stay intact.
+  v2_webhook: WorkflowV2WebhookNode,
+  v2_webhook_source: WorkflowV2WebhookNode,
+  v2_outbound_webhook: WorkflowV2OutboundWebhookNode,
+  v2_source_query: WorkflowV2SourceQueryNode,
+  v2_source_write: WorkflowV2SourceWriteNode,
+  v2_metadata_store: WorkflowV2MetadataStoreNode,
+  v2_http_request: WorkflowV2HttpRequestNode,
+  v2_secret_read: WorkflowV2SecretReadNode,
+  v2_subworkflow: WorkflowV2SubworkflowNode,
+  v2_human_approval: WorkflowV2HumanApprovalNode,
+  v2_human_form: WorkflowV2HumanFormNode,
+  v2_wait: WorkflowV2WaitNode,
 };
 
 const CUSTOM_NODES: Record<

@@ -1,11 +1,19 @@
 /**
- * Migration client — vectors-in migration into the schift-embed-1 1024d hub.
+ * Migration client — vectors-in migration into the schift-embed-1-small 1024d hub.
  *
  * @example
  * ```ts
- * const q = await schift.migrate.quote({ source: { kind: "pgvector", config: {...} } });
- * if (q.free_tier) {
- *   const job = await schift.migrate.start({ source, target_collection_id: "col_x" });
+ * const q = await schift.migrate.quote({
+ *   n_tokens: 1_000_000,
+ *   source_profile: "vector_store",
+ * });
+ * if (!q.contact_sales) {
+ *   const job = await schift.migrate.start({
+ *     source,
+ *     target_collection_id: "col_x",
+ *     n_tokens: 1_000_000,
+ *     source_profile: "vector_store",
+ *   });
  *   // poll
  *   const status = await schift.migrate.status(job.job_id);
  * }
@@ -23,7 +31,7 @@ export interface SourceConfig {
 
 export interface FeasibilityRequest {
   source_model: string;
-  target_model?: string; // defaults schift-embed-1
+  target_model?: string; // defaults schift-embed-1-small
   source_vectors: number[][];
   target_vectors: number[][];
 }
@@ -36,24 +44,43 @@ export interface FeasibilityResponse {
   notes: string;
 }
 
+export type MigrationSourceProfile = "vector_store" | "obsidian_vault";
+export type MigrationSlaTier = "std" | "scale";
+export type MigrationTier =
+  | "starter_trial"
+  | "pro_trial"
+  | "paid_std"
+  | "paid_scale"
+  | "contact_sales";
+
 export interface QuoteRequest {
-  source: SourceConfig;
-  retain_on_cloud?: boolean;
+  n_tokens: number;
+  source_profile: MigrationSourceProfile;
+  sla_tier?: MigrationSlaTier;
 }
 
 export interface QuoteResponse {
-  n_total_vectors: number;
-  src_dim: number;
-  retain_on_cloud: boolean;
-  rate_per_million_cents: number;
-  quote_cents: number;
-  quote_usd: number;
-  free_tier: boolean;
+  tier: MigrationTier;
+  trial_plan: "starter" | "pro" | null;
+  trial_months: number | null;
+  customer_price_usd: number;
+  vendor_full_cost_usd: number;
+  card_required: boolean;
+  contact_sales: boolean;
+  savings_vs_vendor_direct_usd: number;
+  source_profile: MigrationSourceProfile;
+  pipeline: string;
+  ocr_required: boolean;
+  messaging: string;
 }
 
 export interface StartRequest {
   source: SourceConfig;
   target_collection_id: string;
+  n_tokens: number;
+  source_profile: MigrationSourceProfile;
+  sla_tier?: MigrationSlaTier;
+  confirmed_price_usd?: number;
   method?: "ridge" | "procrustes";
   retain_on_cloud?: boolean;
 }
@@ -61,9 +88,15 @@ export interface StartRequest {
 export interface StartResponse {
   job_id: string;
   state: string;
-  quote_cents: number;
-  free_tier: boolean;
+  tier: MigrationTier;
+  trial_plan: "starter" | "pro" | null;
+  trial_months: number | null;
+  customer_price_usd: number;
+  card_required: boolean;
   requires_payment: boolean;
+  checkout_url: string | null;
+  quote: QuoteResponse;
+  messaging: string;
 }
 
 export interface JobStatus {
@@ -89,24 +122,25 @@ export class MigrateClient {
   /** CKA + holdout Ridge cosine; recommends method. No charge. */
   async feasibility(request: FeasibilityRequest): Promise<FeasibilityResponse> {
     return this.http.post<FeasibilityResponse>(`${BASE}/feasibility`, {
-      target_model: "schift-embed-1",
+      target_model: "schift-embed-1-small",
       ...request,
     });
   }
 
-  /** Size-aware quote. retain_on_cloud=true → $0.10/1M, false → $0.50/1M. */
+  /** Token/profile-aware quote used by the migration service runtime. */
   async quote(request: QuoteRequest): Promise<QuoteResponse> {
     return this.http.post<QuoteResponse>(`${BASE}/quote`, {
-      retain_on_cloud: true,
+      sla_tier: "std",
       ...request,
     });
   }
 
-  /** Kick off async migration. Free tier (≤100K) auto-paid; else requires_payment=true. */
+  /** Kick off async migration. Server re-quotes n_tokens/source_profile before creating a job. */
   async start(request: StartRequest): Promise<StartResponse> {
     return this.http.post<StartResponse>(`${BASE}/start`, {
       method: "ridge",
       retain_on_cloud: true,
+      sla_tier: "std",
       ...request,
     });
   }

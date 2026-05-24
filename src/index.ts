@@ -1,4 +1,4 @@
-export { Schift } from "./client.js";
+export { Schift, SchiftAuth } from "./client.js";
 export { TokenTracker, track, activeTracker } from "./tracker.js";
 export type { TrackerSummary } from "./tracker.js";
 export { openaiClient } from "./openai-compat.js";
@@ -28,6 +28,15 @@ export type {
   BucketContextResponse,
   BucketContextChunk,
   BucketContextTurn,
+  SchiftAuthConfig,
+  AuthSignupRequest,
+  AuthSignupResponse,
+  AuthLoginRequest,
+  AuthLoginResponse,
+  AuthMeResponse,
+  AuthUser,
+  AuthOrg,
+  AuthPendingInvite,
 } from "./types.js";
 
 // ---- Tool Calling ----
@@ -36,12 +45,36 @@ export { SchiftTools } from "./tools.js";
 // ---- Workflow ----
 export { WorkflowClient, WorkflowBuilder } from "./workflow/index.js";
 export {
+  SchiftWorkflowArtifact,
+  workflow,
+} from "./workflow-v2/index.js";
+export {
   BlockType,
   WorkflowStatus,
   RunStatus,
   BlockRunStatus,
   WorkflowTemplate,
 } from "./workflow/index.js";
+export type {
+  WorkflowV2ArtifactInput,
+  WorkflowV2Block,
+  WorkflowV2Document,
+  WorkflowV2Edge,
+  WorkflowV2HumanApprovalRequest,
+  WorkflowV2HumanFormRequest,
+  WorkflowV2HttpRequest,
+  WorkflowV2MetadataEntry,
+  WorkflowV2RunOptions,
+  WorkflowV2RunResult,
+  WorkflowV2RuntimeMiddleware,
+  WorkflowV2SecretRead,
+  WorkflowV2SourceQuery,
+  WorkflowV2SourceWrite,
+  WorkflowV2StreamEvent,
+  WorkflowV2SubworkflowRun,
+  WorkflowV2WaitRequest,
+  WorkflowV2WebhookEvent,
+} from "./workflow-v2/index.js";
 export type {
   HttpTransport,
   BlockDescriptor,

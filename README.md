@@ -45,6 +45,34 @@ You can also use environment variables:
 const client = new Schift({ apiKey: process.env.SCHIFT_API_KEY! });
 ```
 
+## Local Auth Readiness
+
+`/v1/auth/me` validates a user JWT, not a `sch_*` API key. For local Docker
+smoke tests, use the auth helper to create a disposable user and verify the
+same JWT against the running API:
+
+```typescript
+import { Schift } from "@schift-io/sdk";
+
+const auth = Schift.auth({ baseUrl: "http://127.0.0.1:8011" });
+await auth.health();
+const signup = await auth.signup({
+  email: `sdk-smoke-${Date.now()}@example.test`,
+  password: "SmokePass1234!",
+  name: "SDK Smoke",
+  orgName: "SDK Smoke Org",
+  region: "seoul",
+});
+const me = await auth.me(signup.token);
+console.log(me.user.email, me.orgs[0]?.name);
+```
+
+With a local API already running:
+
+```bash
+SCHIFT_API_URL=http://127.0.0.1:8011 npm run smoke:auth
+```
+
 ## Features
 
 ### Embeddings
@@ -102,6 +130,53 @@ const fresh = await webSearch.search("Schift framework launch updates");
 
 Tool calling helpers created from `client.tools` include `schift_web_search` by default, so OpenAI/Claude/Vercel AI SDK integrations can call live web search without extra wiring.
 
+### PII Masking
+
+Mask Korean PII before sending text to an LLM, vector store, or workflow step.
+Use `types` when you want the masking contract to be visible and selectable.
+
+```typescript
+const piiTypes = [
+  "resident_id",
+  "alien_registration",
+  "passport",
+  "driver_license",
+  "address",
+  "phone",
+  "bank_account",
+];
+
+const result = await client.redactPii({
+  text: "주민등록번호 850205-1234567, 연락처 010-1234-5678",
+  returnMode: "both",
+  types: piiTypes,
+});
+
+const masked = await client.mask("계좌 123-45-678901", {
+  types: ["bank_account"],
+});
+```
+
+The default token format returns tokens such as `[PII_PHONE_1]` and a
+`reverse_map` so the caller can restore the original values after the workflow
+step. Keep that map only in your temporary restore path; Schift does not
+persist or gateway-cache it for `pii_type_index` requests. Set
+`tokenFormat: "label_index"` only when you need legacy tokens such as `[PHONE_1]`.
+
+Send only `masked` into the LLM, agent, vector store, or workflow step. Never
+include `reverse_map` in the AI payload; use it only after the AI result returns
+if your app needs to restore values.
+
+```typescript
+const restored = await client.restorePii({
+  text: "고객 연락처 [PII_PHONE_1]로 안내하세요.",
+  reverseMap: result.reverse_map!,
+});
+```
+
+`restorePii()` is a stateless API call. It requires an API key and does not
+persist or cache the map.
+
 ### BYOK (Bring Your Own LLM Key)
 
 Register your own OpenAI / Google / Anthropic key so `/v1/chat` and `/v1/chat/completions` call the provider directly instead of consuming Schift Cloud's shared LLM quota. Supported providers: `"openai"`, `"google"`, `"anthropic"`.
@@ -129,6 +204,111 @@ Schift sits underneath the agent framework. The integration point is always the 
 3. return grounded chunks back to the model
 
 That means you can keep your preferred agent SDK and swap only the retrieval layer.
+
+### Workflow v2 SDK Adapters
+
+Run complete Workflow v2 graphs through the local Schift SDK runtime. The YAML
+stays a contract in the user's process; it is not sent to Schift Cloud unless
+you explicitly save/publish it through the workflow API:
+
+```typescript
+import { Schift } from "@schift-io/sdk";
+
+const schift = new Schift({ apiKey: process.env.SCHIFT_API_KEY! });
+const wf = schift.workflow({ yaml });
+
+const run = await wf.run({
+  query: "계약서 리스크 봐줘",
+});
+
+// For local nodes that need Schift APIs, pass the client explicitly:
+await wf.run({ inputs: { query: "계약서 리스크 봐줘" }, client: schift });
+
+// Webhook/metadata side effects stay caller-owned through middleware.
+await wf.run({
+  inputs: { webhooks: { "teacher-request": { caseId: "case_1" } } },
+  middleware: {
+    receiveWebhook: (event) => event.payload,
+    writeMetadata: async (entry) => {
+      await localDb.metadata.put(entry.namespace, entry.key, entry.value);
+      return { stored: true };
+    },
+    deliverWebhook: async (event) => {
+      await appServer.deliver(event.webhook, event.payload);
+      return { delivered: true };
+    },
+    requestHttp: (request) => appServer.fetch(request),
+    readSecret: (request) => localSecrets.get(request.secret),
+    requestApproval: (request) => approvals.enqueue(request),
+    requestForm: (request) => forms.enqueue(request),
+    wait: (request) => scheduler.defer(request),
+    runSubworkflow: (request) => workflowRegistry.run(request.workflowRef, request.subworkflowInputs),
+  },
+});
+
+for await (const event of wf.stream({ query: "계약서 리스크 봐줘" })) {
+  if (event.type === "block.completed") console.log(event.blockId);
+  if (event.type === "workflow.completed") console.log(event.run.outputs);
+}
+```
+
+Framework adapters are intentionally narrower. `asVercelAI()` projects one
+selected Workflow v2 `llm_generate` block into Vercel AI SDK call options. It
+does not execute upstream retrieval, transforms, conditions, or the full graph.
+Use the local runtime with `workflow.run()` / `workflow.stream()` for graph
+execution. Use `schift.workflows.run(workflowId, inputs)` only for intentionally
+hosted, persisted workflows:
+
+```typescript
+import { generateText } from "ai";
+import { Schift } from "@schift-io/sdk";
+import { asVercelAI } from "@schift-io/workflow-vercel-ai";
+
+const schift = new Schift({ apiKey: process.env.SCHIFT_API_KEY! });
+const wf = schift.workflow({ yaml });
+
+const result = await generateText(
+  await asVercelAI(wf, {
+    mode: "generateText",
+    entry: "answer",
+  }),
+);
+```
+
+Structured output schemas can live in the Workflow v2 YAML block config as
+`response_schema` / `output_schema` / `schema`. Vercel adapters pass that schema
+through as `schema` for `generateObject`/`streamObject`, while Google Gen AI
+adapters map it to `config.responseMimeType = "application/json"` and
+`config.responseSchema`.
+
+```typescript
+import { GoogleGenAI } from "@google/genai";
+import { Schift } from "@schift-io/sdk";
+import { asGoogleGenAI } from "@schift-io/workflow-google-genai";
+
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+const schift = new Schift({ apiKey: process.env.SCHIFT_API_KEY! });
+const wf = schift.workflow({ yaml });
+
+const response = await ai.models.generateContent(
+  await asGoogleGenAI(wf, { entry: "answer" }),
+);
+```
+
+```typescript
+import { asLangGraph } from "@schift-io/workflow-langgraph";
+
+const graph = await asLangGraph(wf, {
+  state: { messages: [] },
+});
+
+const result = await graph.invoke({
+  messages: [{ role: "user", content: "계약서 리스크 봐줘" }],
+});
+```
+
+The adapter packages declare framework SDKs as peer dependencies and do not add
+Vercel AI SDK, Google Gen AI, or LangGraph to the core `@schift-io/sdk` bundle.
 
 ### Google Gen AI SDK
 
@@ -299,6 +479,13 @@ Runtime overrides (passed via `workflows.run()` inputs): `bucket`, `filter`,
 
 When you don't need a persisted workflow record, hit `/v1/rag/run` directly —
 shares the same code path, less overhead, structured output supported.
+
+That shared runtime is intentionally modular inside the server while staying
+fused on the serving path: retrieval resolves the bucket and fetches hits,
+context-build formats the prompt evidence, generation renders/calls the LLM,
+and evidence-format returns sources/results to the caller. Keep custom prompt
+templates on workflow RAG config or `/v1/rag/run`; public `/v1/chat` owns its
+server-built RAG prompt and rejects client-supplied `system_prompt`.
 
 ```typescript
 const resp = await fetch("https://api.schift.io/v1/rag/run", {
@@ -480,7 +667,7 @@ try {
 | `openai/text-embedding-3-large` | OpenAI | 3072 |
 | `gemini/text-embedding-004` | Google | 768 |
 | `voyage/voyage-3-large` | Voyage | 1024 |
-| `schift-embed-1-preview` | Schift | 1024 |
+| `schift-embed-1-small` | Schift | 1024 |
 
 All models output to a canonical 1024-dimensional space via Schift's projection layer.
 
@@ -491,8 +678,8 @@ Published from the `schift-io/schift` monorepo to npm via
 
 ```bash
 # 1. Bump version
-$EDITOR sdk/ts/package.json   # version: "0.X.Y"
-git add sdk/ts/package.json && git commit -m "chore(sdk-ts): bump 0.X.Y"
+$EDITOR clients/sdk/ts/package.json   # version: "0.X.Y"
+git add clients/sdk/ts/package.json && git commit -m "chore(sdk-ts): bump 0.X.Y"
 git push origin main
 
 # 2. Create the release (tag pattern: npm-v*)

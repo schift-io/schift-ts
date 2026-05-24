@@ -40,7 +40,7 @@ export const ConnectionTypes = {
   RagSearch: "rag_search",
   /** Decision-review pipeline result (favorable + contradicting evidence). */
   RagDecisionReview: "rag_decisionReview",
-  /** Embedding model (default: schift-embed-1). */
+  /** Embedding model (default: schift-embed-1-small). */
   RagEmbedding: "rag_embedding",
   /** Reranker model (Cohere / our own). */
   RagReranker: "rag_reranker",

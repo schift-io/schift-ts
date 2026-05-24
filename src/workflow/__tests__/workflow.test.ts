@@ -462,6 +462,10 @@ describe("Type constants", () => {
     expect(types).toContain("code");
     expect(types).toContain("http_request");
     expect(types).toContain("webhook");
+    expect(types).toContain("webhook_source");
+    expect(types).toContain("outbound_webhook");
+    expect(types).toContain("source_query");
+    expect(types).toContain("source_write");
     expect(types).toContain("metadata_extractor");
   });
 

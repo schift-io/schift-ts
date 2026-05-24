@@ -41,6 +41,31 @@ describe("TokenTracker", () => {
     expect(s.llm_input_tokens).toBe(0);
   });
 
+  it("treats OpenAI-shaped embeddings as embed_tokens", () => {
+    const t = new TokenTracker();
+    t.recordResponse({
+      object: "list",
+      data: [{ object: "embedding", index: 0, embedding: [0.1, 0.2] }],
+      model: "text-embedding-3-small",
+      usage: { prompt_tokens: 4, total_tokens: 4 },
+    });
+    const s = t.summary();
+    expect(s.call_count).toBe(1);
+    expect(s.embed_tokens).toBe(4);
+    expect(s.llm_input_tokens).toBe(0);
+    expect(s.llm_output_tokens).toBe(0);
+  });
+
+  it("fails soft for unknown usage shapes", () => {
+    const t = new TokenTracker();
+    t.recordResponse({ usage: { tokens: { input: 3 }, prompt_tokens: "many" } });
+    const s = t.summary();
+    expect(s.call_count).toBe(1);
+    expect(s.llm_input_tokens).toBe(0);
+    expect(s.llm_output_tokens).toBe(0);
+    expect(s.embed_tokens).toBe(0);
+  });
+
   it("counts call even when usage is missing", () => {
     const t = new TokenTracker();
     t.recordResponse({ results: [{ id: "doc_1" }] });

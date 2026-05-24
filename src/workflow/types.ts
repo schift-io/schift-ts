@@ -30,6 +30,9 @@ export const BlockType = {
   INGEST_BRIDGE: "ingest_bridge",
   FEED_POLL: "feed_poll",
   NOTIFY: "notify",
+  // Source connector
+  SOURCE_QUERY: "source_query",
+  SOURCE_WRITE: "source_write",
   ANSWER: "answer",
   METADATA_EXTRACTOR: "metadata_extractor",
   WEB_SEARCH: "web_search",
@@ -57,7 +60,7 @@ export const BlockType = {
   OUTBOUND_WEBHOOK: "outbound_webhook",
   // Agent root node — runs a ReAct loop using sidecar AgentLanguageModel /
   // AgentMemory / AgentTool ports. The workflow-level counterpart of the
-  // standalone Agent runtime in sdk/ts/src/agent/.
+  // standalone Agent runtime in clients/sdk/ts/src/agent/.
   AI_AGENT: "ai_agent",
 } as const;
 

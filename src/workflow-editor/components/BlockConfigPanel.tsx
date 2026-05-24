@@ -62,7 +62,7 @@ function FieldsEditor({
             <input
               value={field.name}
               onChange={(e) => updateField(idx, { name: e.target.value })}
-              placeholder="field_name"
+              placeholder="Field name"
               className="flex-1 min-w-0 bg-transparent text-xs text-[var(--schift-gray-20)] border-none outline-none font-mono"
             />
             <select
@@ -199,7 +199,7 @@ function ConfigField({
   if (Array.isArray(value) || (typeof value === "object" && value !== null)) {
     return (
       <div>
-        <label className="text-xs text-[var(--schift-gray-50)] block mb-1 capitalize">{name.replace(/_/g, " ")} (JSON)</label>
+        <label className="text-xs text-[var(--schift-gray-50)] block mb-1 capitalize">{name.replace(/_/g, " ")} (advanced)</label>
         <textarea value={JSON.stringify(value, null, 2)} onChange={(e) => { try { onChange(JSON.parse(e.target.value)); } catch { /* invalid */ } }} rows={3} className="w-full px-2 py-1.5 text-xs font-mono bg-[var(--schift-gray-100)] border border-[var(--schift-gray-70)] rounded text-[var(--schift-gray-30)] focus:outline-none focus:border-[var(--schift-blue)] resize-none" />
       </div>
     );

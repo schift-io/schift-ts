@@ -217,20 +217,20 @@ function FieldRow({
             onUpdate(field.id, { type: types[(idx + 1) % types.length], children: [] });
           }}
           className={`text-[10px] font-mono w-6 text-center ${TYPE_COLORS[field.type]} hover:opacity-70`}
-          title="Click to change type"
+          title="Change field type"
         >
           {TYPE_ICONS[field.type]}
         </button>
         <input
           value={field.name}
           onChange={(e) => onUpdate(field.id, { name: e.target.value })}
-          placeholder="field_name"
+          placeholder="Field name"
           className="flex-1 min-w-0 bg-transparent text-xs text-[var(--schift-gray-20)] border-none outline-none font-mono"
         />
         <button
           onClick={() => onUpdate(field.id, { required: !field.required })}
           className={`text-[10px] px-1 rounded ${field.required ? "text-red-400 bg-red-400/10" : "text-[var(--schift-gray-60)] hover:text-[var(--schift-gray-40)]"}`}
-          title={field.required ? "Required (click to make optional)" : "Optional (click to make required)"}
+          title={field.required ? "Required field" : "Optional field"}
         >
           {field.required ? "req" : "opt"}
         </button>
@@ -241,7 +241,7 @@ function FieldRow({
       </div>
       {depth === 0 && (
         <div style={{ paddingLeft: `${depth * 16 + 28}px` }}>
-          <input value={field.description} onChange={(e) => onUpdate(field.id, { description: e.target.value })} placeholder="description (optional)" className="w-full bg-transparent text-[10px] text-[var(--schift-gray-60)] border-none outline-none italic" />
+          <input value={field.description} onChange={(e) => onUpdate(field.id, { description: e.target.value })} placeholder="Description users will understand" className="w-full bg-transparent text-[10px] text-[var(--schift-gray-60)] border-none outline-none italic" />
         </div>
       )}
       {hasChildren && expanded && actualChildren.length > 0 && (
@@ -312,10 +312,10 @@ export default function SchemaBuilder({ value, onChange }: SchemaBuilderProps) {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <label className="text-xs text-[var(--schift-gray-50)]">Output Schema</label>
+        <label className="text-xs text-[var(--schift-gray-50)]">Answer fields</label>
         <div className="flex gap-1">
-          <button onClick={() => setShowPresets(!showPresets)} className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--schift-gray-80)] text-[var(--schift-gray-40)] hover:text-[var(--schift-white)]">Presets</button>
-          <button onClick={() => setShowJson(!showJson)} className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--schift-gray-80)] text-[var(--schift-gray-40)] hover:text-[var(--schift-white)]">{showJson ? "Visual" : "JSON"}</button>
+          <button onClick={() => setShowPresets(!showPresets)} className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--schift-gray-80)] text-[var(--schift-gray-40)] hover:text-[var(--schift-white)]">Examples</button>
+          <button onClick={() => setShowJson(!showJson)} className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--schift-gray-80)] text-[var(--schift-gray-40)] hover:text-[var(--schift-white)]">{showJson ? "Visual" : "Advanced JSON"}</button>
         </div>
       </div>
       {showPresets && (
