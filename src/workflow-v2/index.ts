@@ -7,8 +7,10 @@ export type {
   WorkflowV2Block,
   WorkflowV2Document,
   WorkflowV2Edge,
+  WorkflowV2DocumentExtractRequest,
   WorkflowV2HumanApprovalRequest,
   WorkflowV2HumanFormRequest,
+  WorkflowV2HumanInputRequest,
   WorkflowV2HttpRequest,
   WorkflowV2MetadataEntry,
   WorkflowV2RunOptions,
@@ -19,6 +21,7 @@ export type {
   WorkflowV2SourceWrite,
   WorkflowV2StreamEvent,
   WorkflowV2SubworkflowRun,
+  WorkflowV2ToolCallRequest,
   WorkflowV2WaitRequest,
   WorkflowV2WebhookEvent,
 } from "./artifact.js";

@@ -91,6 +91,13 @@ import {
   WorkflowV2SubworkflowNode,
   WorkflowV2HumanApprovalNode,
   WorkflowV2HumanFormNode,
+  WorkflowV2HumanInputNode,
+  WorkflowV2TransformNode,
+  WorkflowV2DocumentExtractNode,
+  WorkflowV2ToolCallNode,
+  WorkflowV2IterationNode,
+  WorkflowV2LoopNode,
+  WorkflowV2ControlBoundaryNode,
   WorkflowV2WaitNode,
 } from "./v2-runtime.js";
 
@@ -153,6 +160,8 @@ const BUILTIN_HANDLERS: Record<string, new (block: BlockDef) => SDKBaseNode> = {
   wait: WaitNode,
   schedule_trigger: ScheduleTriggerNode,
   manual_trigger: ManualTriggerNode,
+  gmail_trigger: ServerOnlyNode,
+  notion_trigger: ServerOnlyNode,
   human_approval: HumanApprovalNode,
   human_form: HumanFormNode,
   decision_review: DecisionReviewNode,
@@ -173,6 +182,14 @@ const BUILTIN_HANDLERS: Record<string, new (block: BlockDef) => SDKBaseNode> = {
   v2_subworkflow: WorkflowV2SubworkflowNode,
   v2_human_approval: WorkflowV2HumanApprovalNode,
   v2_human_form: WorkflowV2HumanFormNode,
+  v2_human_input: WorkflowV2HumanInputNode,
+  v2_transform: WorkflowV2TransformNode,
+  v2_document_extract: WorkflowV2DocumentExtractNode,
+  v2_tool_call: WorkflowV2ToolCallNode,
+  v2_iteration: WorkflowV2IterationNode,
+  v2_iteration_boundary: WorkflowV2ControlBoundaryNode,
+  v2_loop: WorkflowV2LoopNode,
+  v2_loop_boundary: WorkflowV2ControlBoundaryNode,
   v2_wait: WorkflowV2WaitNode,
 };
 

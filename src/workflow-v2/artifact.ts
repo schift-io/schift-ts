@@ -18,6 +18,7 @@ export interface WorkflowV2Block {
   id: string;
   type: string;
   title?: string;
+  position?: { x: number; y: number };
   config?: Record<string, unknown>;
   capabilities?: string[];
 }
@@ -56,13 +57,16 @@ export type WorkflowV2RunResult = WorkflowRunResult;
 export type {
   WorkflowV2HumanApprovalRequest,
   WorkflowV2HumanFormRequest,
+  WorkflowV2HumanInputRequest,
   WorkflowV2HttpRequest,
   WorkflowV2MetadataEntry,
+  WorkflowV2DocumentExtractRequest,
   WorkflowV2RuntimeMiddleware,
   WorkflowV2SecretRead,
   WorkflowV2SourceQuery,
   WorkflowV2SourceWrite,
   WorkflowV2SubworkflowRun,
+  WorkflowV2ToolCallRequest,
   WorkflowV2WaitRequest,
   WorkflowV2WebhookEvent,
 } from "../workflow/v2-runtime.js";
@@ -222,6 +226,14 @@ function localBlockType(type: string): string {
   if (type === "subworkflow") return "v2_subworkflow";
   if (type === "human_approval") return "v2_human_approval";
   if (type === "human_form") return "v2_human_form";
+  if (type === "human_input") return "v2_human_input";
+  if (type === "transform") return "v2_transform";
+  if (type === "document_extract") return "v2_document_extract";
+  if (type === "tool_call") return "v2_tool_call";
+  if (type === "iteration") return "v2_iteration";
+  if (type === "iteration_boundary") return "v2_iteration_boundary";
+  if (type === "loop") return "v2_loop";
+  if (type === "loop_boundary") return "v2_loop_boundary";
   if (type === "wait") return "v2_wait";
   return type;
 }

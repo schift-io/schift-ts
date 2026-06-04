@@ -559,7 +559,7 @@ describe("Tier 3 server-only stubs", () => {
     "document_loader", "document_parser", "chunker", "code",
     "http_request", "webhook", "webhook_source", "ingest_bridge",
     "feed_poll", "ai_router", "rag", "source_query", "source_write",
-    "subworkflow", "outbound_webhook",
+    "gmail_trigger", "notion_trigger", "subworkflow", "outbound_webhook",
   ];
 
   it.each(serverOnlyTypes)("%s raises server-only error", async (blockType) => {

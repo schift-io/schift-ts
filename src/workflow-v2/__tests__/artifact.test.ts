@@ -260,4 +260,116 @@ describe("Workflow v2 artifact", () => {
     expect(result.blockStates.approval.outputs.approved).toBe(true);
     expect(result.outputs.result).toEqual({ childRunId: "run_child_1" });
   });
+
+  it("runs Dify-normalized native blocks without Dify-specific runtime branches", async () => {
+    const calls: string[] = [];
+    const artifact = workflow({
+      workflow: {
+        schemaVersion: 2,
+        runtime: "schift.workflow.v2",
+        name: "dify-normalized-flow",
+        metadata: { source_framework: "dify" },
+        blocks: [
+          { id: "start", type: "start" },
+          {
+            id: "extract",
+            type: "document_extract",
+            config: { input: "{{#start.files#}}", mode: "extract_text" },
+          },
+          {
+            id: "render",
+            type: "transform",
+            config: { operation: "template", default: { prompt: "Summarize" } },
+          },
+          {
+            id: "review",
+            type: "human_input",
+            config: {
+              form_schema: [{ output_variable_name: "review_notes" }],
+              actions: [{ id: "approve", title: "Approve" }],
+              delivery: [{ id: "webapp", type: "webapp", enabled: true }],
+              timeout: 2,
+              resume: { mode: "pause_resume", payload: "form_submission" },
+            },
+          },
+          {
+            id: "search",
+            type: "tool_call",
+            config: {
+              framework: "dify",
+              dify_type: "tool",
+              tool: "search",
+              capability: "google.search",
+              provider_type: "builtin",
+              configurations: { result_type: "text" },
+              raw: { credential_id: "cred_1" },
+              parameters: { query: "{{#render.output#}}" },
+            },
+          },
+          {
+            id: "each_item",
+            type: "iteration",
+            config: { item_selector: "{{#search.results#}}", parallel: true },
+          },
+          {
+            id: "retry",
+            type: "loop",
+            config: { max_iterations: 5, break_condition: { conditions: [] } },
+          },
+        ],
+        edges: [
+          { source: "start", target: "extract" },
+          { source: "extract", target: "render" },
+          { source: "render", target: "review" },
+          { source: "review", target: "search" },
+          { source: "search", target: "each_item" },
+          { source: "each_item", target: "retry" },
+        ],
+      },
+    });
+
+    const result = await artifact.run({
+      inputs: { files: ["contract.pdf"] },
+      middleware: {
+        extractDocument: (event) => {
+          calls.push(`document:${event.input}`);
+          return { text: "contract text" };
+        },
+        requestHumanInput: (event) => {
+          calls.push(`human:${event.actions.length}:${event.delivery.length}`);
+          return { submitted: true, action: "approve" };
+        },
+        executeDifyTool: (event) => {
+          calls.push(
+            `dify-tool:${event.dify?.providerType}:${event.dify?.credentialId}:${event.capability}`,
+          );
+          expect(event.dify).toMatchObject({
+            providerType: "builtin",
+            pluginUniqueIdentifier: "google.search",
+            credentialId: "cred_1",
+            toolConfigurations: { result_type: "text" },
+          });
+          return { results: [{ title: "result" }] };
+        },
+      },
+    });
+
+    expect(result.status).toBe("completed");
+    expect(calls).toEqual([
+      "document:{{#start.files#}}",
+      "human:1:1",
+      "dify-tool:builtin:cred_1:google.search",
+    ]);
+    expect(result.blockStates.extract.outputs.document).toEqual({
+      text: "contract text",
+    });
+    expect(result.blockStates.review.outputs.humanInput).toEqual({
+      submitted: true,
+      action: "approve",
+    });
+    expect(result.blockStates.retry.outputs.loop).toMatchObject({
+      maxIterations: 5,
+      simulatedIterations: 3,
+    });
+  });
 });

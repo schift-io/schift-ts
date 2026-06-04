@@ -26,6 +26,8 @@ export type BlockCategory =
   | "Logic"
   | "Transform"
   | "HITL"
+  | "Communication"
+  | "Productivity"
   | "Integration";
 
 // ---- Block Type Definitions ----
@@ -78,6 +80,8 @@ export const CATEGORY_COLORS: Record<BlockCategory, string> = {
   Logic: "bg-cyan-900 border-cyan-700",
   Transform: "bg-orange-900 border-orange-700",
   HITL: "bg-lime-900 border-lime-700",
+  Communication: "bg-red-900 border-red-700",
+  Productivity: "bg-neutral-900 border-neutral-700",
   Integration: "bg-pink-900 border-pink-700",
 };
 
@@ -94,6 +98,8 @@ export const CATEGORY_BADGE_COLORS: Record<BlockCategory, string> = {
   Logic: "bg-cyan-500/20 text-cyan-300",
   Transform: "bg-orange-500/20 text-orange-300",
   HITL: "bg-lime-500/20 text-lime-300",
+  Communication: "bg-red-500/20 text-red-300",
+  Productivity: "bg-neutral-500/20 text-neutral-300",
   Integration: "bg-pink-500/20 text-pink-300",
 };
 
@@ -110,6 +116,8 @@ export const CATEGORY_ACCENT: Record<BlockCategory, string> = {
   Logic: "border-l-cyan-500",
   Transform: "border-l-orange-500",
   HITL: "border-l-lime-500",
+  Communication: "border-l-red-500",
+  Productivity: "border-l-neutral-500",
   Integration: "border-l-pink-500",
 };
 
@@ -119,9 +127,12 @@ export const BLOCK_TYPES: BlockTypeDefinition[] = [
   // Control
   { type: "start", label: "Start", category: "Control", icon: "▶", defaultConfig: {}, inputs: [], outputs: ["out"] },
   { type: "end", label: "End", category: "Control", icon: "⏹", defaultConfig: {}, inputs: ["in"], outputs: [] },
+  { type: "subworkflow", label: "Subworkflow", category: "Control", icon: "⇥", defaultConfig: { workflow_id: "", timeout_s: 0 }, inputs: ["in"], outputs: ["out"] },
   // Trigger
   { type: "manual_trigger", label: "Manual Trigger", category: "Trigger", icon: "☛", defaultConfig: {}, inputs: [], outputs: ["out"] },
   { type: "schedule_trigger", label: "Schedule Trigger", category: "Trigger", icon: "⧖", defaultConfig: { cron: "0 * * * *" }, inputs: [], outputs: ["out"] },
+  { type: "gmail_trigger", label: "Gmail Trigger", category: "Communication", icon: "GM", defaultConfig: { event: "message_received", labelIds: ["INBOX"], readStatus: "unread", query: "" }, inputs: [], outputs: ["out"] },
+  { type: "notion_trigger", label: "Notion Trigger", category: "Productivity", icon: "NO", defaultConfig: { event: "pageUpdatedInDatabase", databaseId: "", pageIds: [] }, inputs: [], outputs: ["out"] },
   { type: "wait", label: "Wait", category: "Trigger", icon: "⏱", defaultConfig: { duration_ms: 1000 }, inputs: ["in"], outputs: ["out"] },
   // Document
   { type: "document_loader", label: "Document Loader", category: "Document", icon: "📄", defaultConfig: { source: "" }, inputs: ["in"], outputs: ["docs"] },
@@ -142,6 +153,8 @@ export const BLOCK_TYPES: BlockTypeDefinition[] = [
   { type: "llm", label: "LLM", category: "LLM", icon: "◎", defaultConfig: { model: "gpt-4o-mini", temperature: 0.7, max_tokens: 1024 }, inputs: ["prompt"], outputs: ["response"] },
   { type: "prompt_template", label: "Prompt Template", category: "LLM", icon: "✎", defaultConfig: { template: "" }, inputs: ["vars"], outputs: ["prompt"] },
   { type: "answer", label: "Answer", category: "LLM", icon: "◉", defaultConfig: { format: "text" }, inputs: ["response"], outputs: ["out"] },
+  // Agent
+  { type: "ai_agent", label: "AI Agent", category: "Agent", icon: "A", defaultConfig: { systemPrompt: "You are a helpful assistant.", tokenBudget: 1024, maxSteps: 5, onError: "fail" }, inputs: ["prompt", "agent_languageModel", "agent_memory", "agent_tool"], outputs: ["answer", "out"] },
   // Logic
   { type: "condition", label: "Condition", category: "Logic", icon: "⬡", defaultConfig: { expression: "" }, inputs: ["in"], outputs: ["true", "false"] },
   { type: "switch", label: "Switch", category: "Logic", icon: "⍣", defaultConfig: { cases: [] }, inputs: ["in"], outputs: ["case_0", "case_1", "default"] },
@@ -168,6 +181,7 @@ export const BLOCK_TYPES: BlockTypeDefinition[] = [
   { type: "human_form", label: "Human Form", category: "HITL", icon: "✍", defaultConfig: { fields: [] }, inputs: ["in"], outputs: ["submitted"] },
   // Integration
   { type: "http_request", label: "HTTP Request", category: "Integration", icon: "⇆", defaultConfig: { method: "GET", url: "" }, inputs: ["in"], outputs: ["response", "error"] },
+  { type: "outbound_webhook", label: "Outbound Webhook", category: "Integration", icon: "↗", defaultConfig: { url: "", headers: "{}", forward_inputs: false, timeout: 30, retry: 0 }, inputs: ["in"], outputs: ["response", "error"] },
   { type: "webhook", label: "Webhook", category: "Integration", icon: "↯", defaultConfig: { url: "", secret: "" }, inputs: ["in"], outputs: ["out"] },
 ];
 
@@ -183,8 +197,11 @@ export const BLOCK_ALIASES: Record<string, string[]> = {
   // Control / Trigger
   start: ["entry", "begin", "input", "trigger"],
   end: ["finish", "done", "exit", "output"],
+  subworkflow: ["sub", "subflow", "child", "call", "invoke", "execute workflow"],
   manual_trigger: ["test", "run", "manual"],
   schedule_trigger: ["cron", "interval", "timer", "scheduled"],
+  gmail_trigger: ["gmail", "email", "mail", "inbox", "message", "unread"],
+  notion_trigger: ["notion", "page", "database", "wiki", "workspace"],
   wait: ["pause", "sleep", "delay", "wait", "hitl"],
   // Document / RAG ingest
   document_loader: ["load", "import", "ingest", "pdf", "docx", "html"],
@@ -204,6 +221,7 @@ export const BLOCK_ALIASES: Record<string, string[]> = {
   llm: ["llm", "openai", "anthropic", "gemini", "claude", "gpt", "chat"],
   prompt_template: ["prompt", "template", "format", "interpolate"],
   answer: ["answer", "result", "output", "respond"],
+  ai_agent: ["agent", "react", "tool-use", "autonomous"],
   // Logic
   condition: ["router", "filter", "condition", "logic", "boolean", "branch", "if"],
   switch: ["router", "case", "branch", "switch"],
@@ -230,6 +248,7 @@ export const BLOCK_ALIASES: Record<string, string[]> = {
   human_form: ["form", "input", "questionnaire", "hitl"],
   // Integration
   http_request: ["http", "rest", "api", "request", "url", "curl", "fetch"],
+  outbound_webhook: ["webhook", "post", "callback", "http", "outbound"],
   webhook: ["http", "callback", "webhook", "trigger", "wh"],
 };
 

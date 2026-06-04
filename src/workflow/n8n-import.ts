@@ -87,6 +87,8 @@ const TYPE_MAP: Record<string, MappingTarget> = {
   "n8n-nodes-base.cron": { kind: "block", type: "schedule_trigger" },
   "n8n-nodes-base.interval": { kind: "block", type: "schedule_trigger" },
   "n8n-nodes-base.webhook": { kind: "block", type: "webhook" },
+  "n8n-nodes-base.gmailTrigger": { kind: "block", type: "gmail_trigger" },
+  "n8n-nodes-base.notionTrigger": { kind: "block", type: "notion_trigger" },
 
   // ---- Flow / branching ----
   "n8n-nodes-base.if": { kind: "block", type: "condition" },
@@ -125,15 +127,9 @@ const TYPE_MAP: Record<string, MappingTarget> = {
     reason: "error trigger not supported",
   },
 
-  // ---- Unsupported (fallback to code block) ----
-  "n8n-nodes-base.executeWorkflow": {
-    kind: "unsupported",
-    reason: "executeWorkflow not yet supported",
-  },
-  "@n8n/n8n-nodes-langchain.agent": {
-    kind: "unsupported",
-    reason: "langchain agent has no first-class Schift BlockType yet",
-  },
+  // ---- Runtime bridge nodes ----
+  "n8n-nodes-base.executeWorkflow": { kind: "block", type: "subworkflow" },
+  "@n8n/n8n-nodes-langchain.agent": { kind: "block", type: "ai_agent" },
 };
 
 /** LangChain LLM chat models — all map to `llm`. */
@@ -184,6 +180,42 @@ function classifyNodeType(type: string): MappingTarget {
   if (isLangchainLlmChat(type)) return { kind: "block", type: "llm" };
   if (isLangchainEmbeddings(type)) return { kind: "block", type: "embedder" };
   return { kind: "unsupported", reason: `n8n type '${type}' not yet supported` };
+}
+
+function compactConfig(record: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(record).filter(([, value]) => value !== undefined),
+  );
+}
+
+function normalizeIntegrationTriggerConfig(
+  schiftType: string,
+  params: Record<string, unknown>,
+): Record<string, unknown> {
+  if (schiftType === "gmail_trigger") {
+    const filters =
+      params.filters && typeof params.filters === "object" && !Array.isArray(params.filters)
+        ? (params.filters as Record<string, unknown>)
+        : {};
+    return compactConfig({
+      ...params,
+      provider: "gmail",
+      event: params.event ?? "message_received",
+      labelIds: filters.labelIds ?? params.labelIds,
+      readStatus: filters.readStatus ?? params.readStatus,
+      query: filters.q ?? filters.query ?? params.query,
+    });
+  }
+  if (schiftType === "notion_trigger") {
+    return compactConfig({
+      ...params,
+      provider: "notion",
+      event: params.event ?? "pageUpdatedInDatabase",
+      databaseId: params.databaseId ?? params.database_id,
+      pageIds: params.pageIds ?? params.page_ids,
+    });
+  }
+  return params;
 }
 
 /**
@@ -275,7 +307,9 @@ export function importN8nWorkflow(n8n: N8nWorkflow): N8nImportResult {
       schiftType = mapping.type;
       const params = node.parameters;
       if (params && typeof params === "object" && Object.keys(params).length) {
-        config = { ...params };
+        config = normalizeIntegrationTriggerConfig(schiftType, { ...params });
+      } else if (schiftType === "gmail_trigger" || schiftType === "notion_trigger") {
+        config = normalizeIntegrationTriggerConfig(schiftType, {});
       }
     } else {
       // unsupported -> fall back to code block with TODO marker

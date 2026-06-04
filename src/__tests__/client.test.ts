@@ -49,7 +49,7 @@ describe("Schift client search", () => {
     );
   });
 
-  it("manages child collections inside a resolved bucket", async () => {
+  it("lists child collections inside a resolved bucket", async () => {
     const mockFetch = vi.fn(async (url: RequestInfo | URL) => {
       const path = String(url).replace("https://api.schift.io", "");
       if (path === "/v1/buckets") {
@@ -64,34 +64,20 @@ describe("Schift client search", () => {
           headers: { "Content-Type": "application/json" },
         });
       }
-      return new Response(JSON.stringify({ id: "grant_1", permission: "search" }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
+      return new Response("not found", { status: 404 });
     });
     globalThis.fetch = mockFetch as typeof fetch;
 
     const client = new Schift({ apiKey: "sch_test" });
     await client.listBucketCollections("docs");
-    await client.grantBucketCollectionAccess("docs", "collection_1", {
-      subjectType: "role",
-      subjectId: "support",
-    });
 
     expect(mockFetch).toHaveBeenCalledWith(
       "https://api.schift.io/v1/buckets/bucket_1/collections",
       expect.objectContaining({ method: "GET" }),
     );
-    expect(mockFetch).toHaveBeenCalledWith(
-      "https://api.schift.io/v1/buckets/bucket_1/collections/collection_1/grants",
-      expect.objectContaining({
-        method: "POST",
-        body: JSON.stringify({
-          subject_type: "role",
-          subject_id: "support",
-          permission: "search",
-        }),
-      }),
+    expect(mockFetch).not.toHaveBeenCalledWith(
+      expect.stringContaining("/grants"),
+      expect.anything(),
     );
   });
 

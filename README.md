@@ -307,8 +307,18 @@ const result = await graph.invoke({
 });
 ```
 
+Use `asDify()` when you need a Dify-compatible workflow export graph from a
+canonical Workflow v2 artifact:
+
+```typescript
+import { asDify } from "@schift-io/workflow-dify";
+
+const difyExport = await asDify(wf);
+```
+
 The adapter packages declare framework SDKs as peer dependencies and do not add
-Vercel AI SDK, Google Gen AI, or LangGraph to the core `@schift-io/sdk` bundle.
+Vercel AI SDK, Google Gen AI, LangGraph, or Dify-specific projection code to the
+core `@schift-io/sdk` bundle.
 
 ### Google Gen AI SDK
 
@@ -416,20 +426,8 @@ Examples:
 // List all buckets
 const buckets = await client.listBuckets();
 
-// Create a permission-scoped child collection inside a bucket
-const supportCollection = await client.createBucketCollection("company-docs", {
-  name: "support-only",
-  description: "Visible to support agents",
-});
-
 await client.db.upload("company-docs", {
   files: [file],
-  collectionId: supportCollection.id,
-});
-
-await client.grantBucketCollectionAccess("company-docs", supportCollection.id, {
-  subjectType: "role",
-  subjectId: "support",
 });
 
 const collections = await client.listBucketCollections("company-docs");

@@ -6,7 +6,7 @@ import {
 } from "../types.js";
 
 describe("BLOCK_TYPES registry", () => {
-  it("includes all 16 new block types", () => {
+  it("includes all n8n-derived and runtime bridge block types", () => {
     const newTypes = [
       "set",
       "filter",
@@ -21,9 +21,14 @@ describe("BLOCK_TYPES registry", () => {
       "wait",
       "schedule_trigger",
       "manual_trigger",
+      "gmail_trigger",
+      "notion_trigger",
       "human_approval",
       "human_form",
       "decision_review",
+      "subworkflow",
+      "outbound_webhook",
+      "ai_agent",
     ];
     const ids = new Set(BLOCK_TYPES.map((b) => b.type));
     for (const t of newTypes) {
@@ -80,9 +85,14 @@ describe("BLOCK_TYPES registry", () => {
     expect(byType.get("wait")?.category).toBe("Trigger");
     expect(byType.get("schedule_trigger")?.category).toBe("Trigger");
     expect(byType.get("manual_trigger")?.category).toBe("Trigger");
+    expect(byType.get("gmail_trigger")?.category).toBe("Communication");
+    expect(byType.get("notion_trigger")?.category).toBe("Productivity");
     expect(byType.get("human_approval")?.category).toBe("HITL");
     expect(byType.get("human_form")?.category).toBe("HITL");
     expect(byType.get("decision_review")?.category).toBe("RAG");
+    expect(byType.get("subworkflow")?.category).toBe("Control");
+    expect(byType.get("outbound_webhook")?.category).toBe("Integration");
+    expect(byType.get("ai_agent")?.category).toBe("Agent");
   });
 });
 

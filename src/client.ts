@@ -22,8 +22,6 @@ import type {
   ProjectResponse,
   BucketUploadResult,
   BucketCollection,
-  CollectionGrant,
-  CollectionGrantRequest,
   ChatRequest,
   ChatResponse,
   ChatStreamEvent,
@@ -750,87 +748,6 @@ export class Schift {
     return { bucket_id: bucketId, bucket_name: bucket, uploaded };
   }
 
-  // ---- Edges ----
-
-  /**
-   * Add edges between nodes in a bucket.
-   *
-   * @example
-   * ```ts
-   * await schift.addEdges("my-bucket", [  // name or ID
-   *   { source: "A", target: "B", relation: "follows" },
-   *   { source: "B", target: "C", relation: "supersedes", weight: 0.8 },
-   * ]);
-   * ```
-   */
-  async addEdges(
-    bucketOrName: string,
-    edges: Array<{
-      source: string;
-      target: string;
-      relation?: string;
-      weight?: number;
-    }>,
-  ): Promise<{ count: number }> {
-    const bucketId = await this._resolveBucket(bucketOrName);
-    return this.post<{ count: number }>(`/v1/buckets/${bucketId}/edges`, {
-      edges,
-    });
-  }
-
-  /**
-   * List edges for a node.
-   */
-  async listEdges(
-    bucketOrName: string,
-    nodeId: string,
-    options?: {
-      direction?: "outgoing" | "incoming" | "both";
-      relation?: string;
-    },
-  ): Promise<{
-    node_id: string;
-    direction: string;
-    edges: Array<{
-      source: string;
-      target: string;
-      relation: string;
-      weight: number;
-    }>;
-  }> {
-    const bucketId = await this._resolveBucket(bucketOrName);
-    const params = new URLSearchParams();
-    if (options?.direction) params.set("direction", options.direction);
-    if (options?.relation) params.set("relation", options.relation);
-    const qs = params.toString();
-    return this.get(
-      `/v1/buckets/${bucketId}/edges/${nodeId}${qs ? `?${qs}` : ""}`,
-    );
-  }
-
-  /**
-   * Delete a specific edge.
-   */
-  async deleteEdge(
-    bucketOrName: string,
-    source: string,
-    target: string,
-    relation: string = "related_to",
-  ): Promise<void> {
-    const bucketId = await this._resolveBucket(bucketOrName);
-    const resp = await fetch(`${this.baseUrl}/v1/buckets/${bucketId}/edges`, {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${this.apiKey}`,
-        "Content-Type": "application/json",
-        "User-Agent": `schift-ts/${VERSION}`,
-      },
-      body: JSON.stringify({ source, target, relation }),
-      signal: AbortSignal.timeout(this.timeout),
-    });
-    if (!resp.ok) await this.throwError(resp);
-  }
-
   // ---- Buckets (legacy collection aliases kept below) ----
 
   /** @deprecated Use listBuckets() instead. */
@@ -1192,50 +1109,6 @@ export class Schift {
   async listBucketCollections(bucketOrName: string): Promise<BucketCollection[]> {
     const bucketId = await this._resolveBucket(bucketOrName);
     return this.get<BucketCollection[]>(`/v1/buckets/${bucketId}/collections`);
-  }
-
-  /**
-   * Aggregate metadata field values across a bucket — powers filter UIs
-   * by surfacing what values exist for each metadata key.
-   */
-  async bucketFacets(
-    bucketOrName: string,
-    fields: string[],
-    limitPerField = 20,
-  ): Promise<{
-    bucket_id: string;
-    facets: Record<string, Array<{ value: string; count: number }>>;
-    totals: Record<string, number>;
-  }> {
-    const bucketId = await this._resolveBucket(bucketOrName);
-    return this.post(`/v1/buckets/${bucketId}/facets`, {
-      fields,
-      limit_per_field: limitPerField,
-    });
-  }
-
-  async createBucketCollection(
-    bucketOrName: string,
-    request: { name: string; description?: string },
-  ): Promise<BucketCollection> {
-    const bucketId = await this._resolveBucket(bucketOrName);
-    return this.post<BucketCollection>(`/v1/buckets/${bucketId}/collections`, request);
-  }
-
-  async grantBucketCollectionAccess(
-    bucketOrName: string,
-    collectionId: string,
-    request: CollectionGrantRequest,
-  ): Promise<CollectionGrant> {
-    const bucketId = await this._resolveBucket(bucketOrName);
-    return this.post<CollectionGrant>(
-      `/v1/buckets/${bucketId}/collections/${collectionId}/grants`,
-      {
-        subject_type: request.subjectType,
-        subject_id: request.subjectId,
-        permission: request.permission ?? "search",
-      },
-    );
   }
 
   // ---- Routing ----

@@ -170,7 +170,8 @@ export function validateDefinition(
     "chunker", "code", "ai_router", "rag", "source_query", "source_write",
     "set", "filter", "switch", "aggregate", "sort", "limit",
     "split_out", "summarize", "remove_duplicates", "datetime", "wait",
-    "schedule_trigger", "manual_trigger", "subworkflow", "outbound_webhook",
+    "schedule_trigger", "manual_trigger", "gmail_trigger", "notion_trigger",
+    "subworkflow", "outbound_webhook",
   ]);
   for (const b of definition.blocks) {
     if (TIER3_TYPES.has(b.type)) {

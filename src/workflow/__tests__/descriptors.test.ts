@@ -29,6 +29,8 @@ describe("descriptor registry", () => {
     expect(getDescriptor(BlockType.REMOVE_DUPLICATES)).toBeDefined();
     expect(getDescriptor(BlockType.SCHEDULE_TRIGGER)).toBeDefined();
     expect(getDescriptor(BlockType.WAIT)).toBeDefined();
+    expect(getDescriptor(BlockType.GMAIL_TRIGGER)).toBeDefined();
+    expect(getDescriptor(BlockType.NOTION_TRIGGER)).toBeDefined();
     expect(getDescriptor(BlockType.SOURCE_QUERY)).toBeDefined();
     expect(getDescriptor(BlockType.SOURCE_WRITE)).toBeDefined();
   });
@@ -73,6 +75,29 @@ describe("descriptor registry", () => {
     expect(names).toContain(BlockType.HUMAN_APPROVAL);
     expect(names).toContain(BlockType.HUMAN_FORM);
     expect(names).toContain(BlockType.WAIT);
+  });
+
+  it("Communication and Productivity categories contain integration triggers", () => {
+    expect(descriptorsByCategory(Category.Communication).map((d) => d.name)).toContain(
+      BlockType.GMAIL_TRIGGER,
+    );
+    expect(descriptorsByCategory(Category.Productivity).map((d) => d.name)).toContain(
+      BlockType.NOTION_TRIGGER,
+    );
+
+    const gmail = getDescriptor(BlockType.GMAIL_TRIGGER);
+    expect(gmail?.group).toContain("trigger");
+    expect(gmail?.outputs.map((p) => p.name)).toEqual(["out"]);
+    expect(gmail?.properties.map((p) => p.name)).toEqual(
+      expect.arrayContaining(["event", "labelIds", "readStatus", "query"]),
+    );
+
+    const notion = getDescriptor(BlockType.NOTION_TRIGGER);
+    expect(notion?.group).toContain("trigger");
+    expect(notion?.outputs.map((p) => p.name)).toEqual(["out"]);
+    expect(notion?.properties.map((p) => p.name)).toEqual(
+      expect.arrayContaining(["event", "databaseId", "pageIds"]),
+    );
   });
 
   it("If node has 2 main outputs named true/false (n8n parity)", () => {

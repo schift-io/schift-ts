@@ -19,14 +19,14 @@ const DefaultButton: UIComponents["Button"] = ({
   type = "button",
 }) => {
   const base =
-    "inline-flex items-center justify-center rounded font-medium transition-colors focus:outline-none disabled:opacity-50 disabled:pointer-events-none";
+    "inline-flex items-center justify-center rounded font-medium transition-[background,border-color,color,box-shadow,transform] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--schift-orange)] focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none disabled:translate-y-0";
   const sizes = size === "sm" ? "h-7 px-3 text-xs" : "h-9 px-4 text-sm";
   const variants: Record<string, string> = {
     default: "bg-[var(--schift-blue)] text-white hover:opacity-90",
     outline:
-      "border border-[var(--schift-gray-70)] text-[var(--schift-gray-30)] hover:bg-[var(--schift-gray-80)]",
+      "border border-[#9d9587] bg-[#fffefb] text-[var(--schift-gray-10)] shadow-[0_1px_0_rgba(32,21,21,0.06)] hover:-translate-y-px hover:border-[var(--schift-gray-10)] hover:bg-[rgba(255,79,0,0.045)]",
     ghost:
-      "text-[var(--schift-gray-30)] hover:bg-[var(--schift-gray-80)]",
+      "text-[var(--schift-gray-30)] hover:bg-[var(--schift-gray-80)] hover:text-[var(--schift-gray-10)]",
     destructive: "bg-[var(--schift-red)] text-white hover:opacity-90",
     danger:
       "border border-[var(--schift-red)]/30 text-[var(--schift-red)] bg-[var(--schift-red)]/10 hover:bg-[var(--schift-red)]/20 text-xs h-7 px-2",
@@ -148,7 +148,7 @@ const DefaultAlert: UIComponents["Alert"] = ({
 const DefaultCard: UIComponents["Card"] = ({ className, children }) => (
   <div
     className={cn(
-      "rounded-lg border border-[var(--schift-gray-80)] bg-[var(--schift-gray-100)]",
+      "rounded-lg border border-[rgba(197,192,177,0.58)] bg-[rgba(255,253,249,0.7)]",
       className,
     )}
   >

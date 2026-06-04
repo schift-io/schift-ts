@@ -157,6 +157,110 @@ register(
 
 register(
   descriptor({
+    name: BlockType.GMAIL_TRIGGER,
+    displayName: "Gmail Trigger",
+    description: "Start a workflow from new Gmail messages after the mailbox connection is reviewed.",
+    icon: "node:gmail",
+    iconColor: "#ea4335",
+    group: ["trigger"],
+    codex: {
+      categories: [Category.Communication, Category.Triggers],
+      subcategories: { [Category.Communication]: ["Email"] },
+      alias: ["gmail", "email", "mail", "inbox", "message", "unread"],
+    },
+    inputs: [],
+    outputs: [mainPort("out")],
+    properties: [
+      {
+        displayName: "Event",
+        name: "event",
+        type: "options",
+        default: "message_received",
+        options: [{ name: "Message Received", value: "message_received" }],
+      },
+      {
+        displayName: "Label IDs",
+        name: "labelIds",
+        type: "string",
+        default: [],
+        description: "Mailbox labels to watch, for example INBOX.",
+      },
+      {
+        displayName: "Read Status",
+        name: "readStatus",
+        type: "options",
+        default: "unread",
+        options: [
+          { name: "Unread", value: "unread" },
+          { name: "Read", value: "read" },
+          { name: "Any", value: "any" },
+        ],
+      },
+      {
+        displayName: "Search Query",
+        name: "query",
+        type: "string",
+        default: "",
+        placeholder: "from:support@example.com has:attachment",
+      },
+    ],
+    builderHint: {
+      message:
+        "Imported Gmail triggers are review-gated. Credentials are not copied; reconnect Gmail and approve any send/write step separately.",
+    },
+  }),
+);
+
+register(
+  descriptor({
+    name: BlockType.NOTION_TRIGGER,
+    displayName: "Notion Trigger",
+    description: "Start a workflow when selected Notion pages or database pages change.",
+    icon: "node:notion",
+    iconColor: "#111827",
+    group: ["trigger"],
+    codex: {
+      categories: [Category.Productivity, Category.Triggers],
+      subcategories: { [Category.Productivity]: ["Docs"] },
+      alias: ["notion", "page", "database", "wiki", "workspace", "doc"],
+    },
+    inputs: [],
+    outputs: [mainPort("out")],
+    properties: [
+      {
+        displayName: "Event",
+        name: "event",
+        type: "options",
+        default: "pageUpdatedInDatabase",
+        options: [
+          { name: "Page Added To Database", value: "pageAddedToDatabase" },
+          { name: "Page Updated In Database", value: "pageUpdatedInDatabase" },
+        ],
+      },
+      {
+        displayName: "Database ID",
+        name: "databaseId",
+        type: "string",
+        default: "",
+        placeholder: "database id",
+      },
+      {
+        displayName: "Page IDs",
+        name: "pageIds",
+        type: "string",
+        default: [],
+        description: "Optional allowlist of pages shared with the Notion integration.",
+      },
+    ],
+    builderHint: {
+      message:
+        "Imported Notion triggers only watch pages/databases shared with the workspace integration. Writes, comments, and status changes need a separate approval boundary.",
+    },
+  }),
+);
+
+register(
+  descriptor({
     name: BlockType.WEBHOOK,
     displayName: "Webhook",
     description: "HTTP webhook trigger. Listens for incoming requests.",

@@ -38,6 +38,29 @@ function configRecord(
   return record(config[key]);
 }
 
+function difyToolMetadata(config: Record<string, unknown>) {
+  const raw = record(config.raw);
+  const toolConfigurations = Object.keys(configRecord(config, "configurations")).length
+    ? configRecord(config, "configurations")
+    : record(raw.tool_configurations);
+  const credentialId = raw.credential_id;
+  const metadata = {
+    providerType: config.provider_type === undefined ? raw.provider_type : config.provider_type,
+    pluginUniqueIdentifier:
+      config.capability === undefined ? raw.plugin_unique_identifier : config.capability,
+    toolConfigurations,
+    credentialId,
+  };
+  return {
+    ...(metadata.providerType === undefined ? {} : { providerType: String(metadata.providerType) }),
+    ...(metadata.pluginUniqueIdentifier === undefined
+      ? {}
+      : { pluginUniqueIdentifier: String(metadata.pluginUniqueIdentifier) }),
+    ...(Object.keys(toolConfigurations).length ? { toolConfigurations } : {}),
+    ...(credentialId === undefined ? {} : { credentialId: String(credentialId) }),
+  };
+}
+
 export class WorkflowV2WebhookNode extends SDKBaseNode {
   async execute(
     inputs: Record<string, unknown>,
@@ -317,6 +340,149 @@ export class WorkflowV2HumanFormNode extends SDKBaseNode {
       ...inputs,
       formData: {},
       ...(response ?? { pending: true }),
+    };
+  }
+}
+
+export class WorkflowV2HumanInputNode extends SDKBaseNode {
+  async execute(
+    inputs: Record<string, unknown>,
+    ctx: SDKExecutionContext,
+  ): Promise<Record<string, unknown>> {
+    const runtime = getWorkflowV2Runtime(ctx.client);
+    const actions = Array.isArray(this.config.actions) ? this.config.actions : [];
+    const delivery = Array.isArray(this.config.delivery) ? this.config.delivery : [];
+    const request = {
+      blockId: this.block.id,
+      blockType: this.block.type,
+      config: this.config,
+      inputs,
+      workflow: runtime.workflow,
+      formSchema: this.config.form_schema ?? this.config.schema ?? [],
+      actions,
+      delivery,
+      timeout: this.config.timeout,
+      resume: this.config.resume ?? { mode: "pause_resume" },
+    };
+    const response = await runtime.middleware?.requestHumanInput?.(request);
+    return {
+      ...inputs,
+      humanInput: response ?? {
+        pending: true,
+        submitted: false,
+        resume: request.resume,
+      },
+    };
+  }
+}
+
+export class WorkflowV2TransformNode extends SDKBaseNode {
+  async execute(inputs: Record<string, unknown>): Promise<Record<string, unknown>> {
+    return {
+      ...inputs,
+      transform: {
+        operation: this.config.operation,
+        result: this.config.default ?? inputs,
+      },
+    };
+  }
+}
+
+export class WorkflowV2DocumentExtractNode extends SDKBaseNode {
+  async execute(
+    inputs: Record<string, unknown>,
+    ctx: SDKExecutionContext,
+  ): Promise<Record<string, unknown>> {
+    const runtime = getWorkflowV2Runtime(ctx.client);
+    const request = {
+      blockId: this.block.id,
+      blockType: this.block.type,
+      config: this.config,
+      inputs,
+      workflow: runtime.workflow,
+      input: configString(this.config, "input"),
+      mode: configString(this.config, "mode", "extract_text"),
+    };
+    const extracted = await runtime.middleware?.extractDocument?.(request);
+    return {
+      ...inputs,
+      document: extracted ?? { staged: true, input: request.input, mode: request.mode },
+    };
+  }
+}
+
+export class WorkflowV2ToolCallNode extends SDKBaseNode {
+  async execute(
+    inputs: Record<string, unknown>,
+    ctx: SDKExecutionContext,
+  ): Promise<Record<string, unknown>> {
+    const runtime = getWorkflowV2Runtime(ctx.client);
+    const request = {
+      blockId: this.block.id,
+      blockType: this.block.type,
+      config: this.config,
+      inputs,
+      workflow: runtime.workflow,
+      tool: configString(this.config, "tool", this.block.id),
+      capability: configString(this.config, "capability", this.block.id),
+      provider:
+        this.config.provider === undefined ? undefined : String(this.config.provider),
+      dify: difyToolMetadata(this.config),
+      parameters: configRecord(this.config, "parameters"),
+    };
+    const result =
+      request.dify.pluginUniqueIdentifier && runtime.middleware?.executeDifyTool
+        ? await runtime.middleware.executeDifyTool(request)
+        : await runtime.middleware?.callTool?.(request);
+    return {
+      ...inputs,
+      tool: request.tool,
+      toolResult: result ?? { staged: true },
+    };
+  }
+}
+
+export class WorkflowV2IterationNode extends SDKBaseNode {
+  async execute(inputs: Record<string, unknown>): Promise<Record<string, unknown>> {
+    return {
+      ...inputs,
+      iteration: {
+        itemSelector: this.config.item_selector,
+        parallel: Boolean(this.config.parallel),
+        maxConcurrency: this.config.max_concurrency,
+        errorStrategy: this.config.error_strategy,
+      },
+    };
+  }
+}
+
+export class WorkflowV2LoopNode extends SDKBaseNode {
+  async execute(inputs: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const configuredMax = Number(this.config.max_iterations ?? 0);
+    return {
+      ...inputs,
+      loop: {
+        maxIterations: this.config.max_iterations,
+        simulatedIterations:
+          Number.isFinite(configuredMax) && configuredMax > 0
+            ? Math.min(configuredMax, 3)
+            : 0,
+        breakCondition: this.config.break_condition,
+        errorStrategy: this.config.error_strategy,
+      },
+    };
+  }
+}
+
+export class WorkflowV2ControlBoundaryNode extends SDKBaseNode {
+  async execute(inputs: Record<string, unknown>): Promise<Record<string, unknown>> {
+    return {
+      ...inputs,
+      boundary: {
+        kind: this.block.type,
+        boundary: this.config.boundary,
+        parent: this.config.parent,
+      },
     };
   }
 }

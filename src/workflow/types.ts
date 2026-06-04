@@ -50,6 +50,8 @@ export const BlockType = {
   WAIT: "wait",
   SCHEDULE_TRIGGER: "schedule_trigger",
   MANUAL_TRIGGER: "manual_trigger",
+  GMAIL_TRIGGER: "gmail_trigger",
+  NOTION_TRIGGER: "notion_trigger",
   // HITL (Human-in-the-Loop)
   HUMAN_APPROVAL: "human_approval",
   HUMAN_FORM: "human_form",

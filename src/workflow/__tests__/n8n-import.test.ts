@@ -74,6 +74,159 @@ describe("importN8nWorkflow — basic shape", () => {
     });
   });
 
+  it("imports Gmail and Notion triggers as reviewable integration triggers", () => {
+    const { workflow, warnings } = importN8nWorkflow({
+      name: "integration-triggers",
+      nodes: [
+        {
+          id: "gmail",
+          name: "New support mail",
+          type: "n8n-nodes-base.gmailTrigger",
+          position: [100, 0],
+          parameters: {
+            pollTimes: { item: [{ mode: "everyMinute" }] },
+            filters: { labelIds: ["INBOX"], readStatus: "unread" },
+          },
+        },
+        {
+          id: "notion",
+          name: "Changed Notion page",
+          type: "n8n-nodes-base.notionTrigger",
+          position: [300, 0],
+          parameters: {
+            event: "pageUpdatedInDatabase",
+            databaseId: "db_123",
+          },
+        },
+      ],
+      connections: {},
+    });
+
+    expect(workflow.blocks).toMatchObject([
+      {
+        id: "gmail",
+        type: "gmail_trigger",
+        config: {
+          provider: "gmail",
+          event: "message_received",
+          labelIds: ["INBOX"],
+          readStatus: "unread",
+        },
+      },
+      {
+        id: "notion",
+        type: "notion_trigger",
+        config: {
+          provider: "notion",
+          event: "pageUpdatedInDatabase",
+          databaseId: "db_123",
+        },
+      },
+    ]);
+    expect(warnings).toEqual([]);
+  });
+
+  it.each([
+    [
+      "gmail filter query shorthand",
+      "n8n-nodes-base.gmailTrigger",
+      { event: "message_received_custom", filters: { q: "label:urgent", labelIds: ["URGENT"], readStatus: "read" } },
+      {
+        provider: "gmail",
+        event: "message_received_custom",
+        labelIds: ["URGENT"],
+        readStatus: "read",
+        query: "label:urgent",
+      },
+    ],
+    [
+      "gmail top-level filter fallback",
+      "n8n-nodes-base.gmailTrigger",
+      { labelIds: ["INBOX"], readStatus: "unread", query: "subject:invoice" },
+      {
+        provider: "gmail",
+        event: "message_received",
+        labelIds: ["INBOX"],
+        readStatus: "unread",
+        query: "subject:invoice",
+      },
+    ],
+    [
+      "notion snake-case fallback",
+      "n8n-nodes-base.notionTrigger",
+      { database_id: "db_snake", page_ids: ["page_snake"] },
+      {
+        provider: "notion",
+        event: "pageUpdatedInDatabase",
+        databaseId: "db_snake",
+        pageIds: ["page_snake"],
+      },
+    ],
+    [
+      "notion camel-case page list",
+      "n8n-nodes-base.notionTrigger",
+      { event: "pageAddedToDatabase", databaseId: "db_camel", pageIds: ["page_camel"] },
+      {
+        provider: "notion",
+        event: "pageAddedToDatabase",
+        databaseId: "db_camel",
+        pageIds: ["page_camel"],
+      },
+    ],
+  ])("normalizes %s", (_label, type, parameters, expectedConfig) => {
+    const { workflow, warnings } = importN8nWorkflow({
+      name: "integration-trigger-normalization",
+      nodes: [
+        {
+          id: "trigger",
+          name: "Integration Trigger",
+          type,
+          position: [0, 0],
+          parameters: parameters as Record<string, unknown>,
+        },
+      ],
+      connections: {},
+    });
+
+    expect(workflow.blocks[0]?.config).toMatchObject(expectedConfig);
+    expect(warnings).toEqual([]);
+  });
+
+  it("adds safe defaults for credentialless Gmail and Notion trigger imports", () => {
+    const { workflow, warnings } = importN8nWorkflow({
+      name: "empty-integration-triggers",
+      nodes: [
+        {
+          id: "gmail",
+          name: "Gmail Trigger",
+          type: "n8n-nodes-base.gmailTrigger",
+          position: [0, 0],
+        },
+        {
+          id: "notion",
+          name: "Notion Trigger",
+          type: "n8n-nodes-base.notionTrigger",
+          position: [200, 0],
+        },
+      ],
+      connections: {},
+    });
+
+    expect(workflow.blocks).toMatchObject([
+      {
+        id: "gmail",
+        type: "gmail_trigger",
+        config: { provider: "gmail", event: "message_received" },
+      },
+      {
+        id: "notion",
+        type: "notion_trigger",
+        config: { provider: "notion", event: "pageUpdatedInDatabase" },
+      },
+    ]);
+    expect(warnings).toEqual([]);
+  });
+
   it("maps positions from [x, y] arrays to {x, y} objects", () => {
     const fx = loadFixture("simple-if-http.json");
     const { workflow } = importN8nWorkflow(fx);
@@ -189,24 +342,31 @@ describe("importN8nWorkflow — skip / fallback rules", () => {
     expect(warnings).toEqual([]);
   });
 
-  it("flags langchain agent as unsupported (code fallback)", () => {
+  it("maps executeWorkflow and langchain agent into first-class runtime nodes", () => {
     const n8n: N8nWorkflow = {
-      name: "lc-agent",
+      name: "composition-agent",
       nodes: [
+        {
+          name: "Run Child",
+          type: "n8n-nodes-base.executeWorkflow",
+          position: [0, 0],
+          parameters: { workflowId: "wf_child", mode: "once" },
+        },
         {
           name: "Agent",
           type: "@n8n/n8n-nodes-langchain.agent",
-          position: [0, 0],
-          parameters: {},
+          position: [200, 0],
+          parameters: { text: "Classify this ticket" },
         },
       ],
       connections: {},
     };
     const { workflow, warnings } = importN8nWorkflow(n8n);
-    expect(workflow.blocks[0]!.type).toBe("code");
-    expect(
-      warnings.some((w) => w.toLowerCase().includes("langchain")),
-    ).toBe(true);
+    expect(workflow.blocks).toMatchObject([
+      { title: "Run Child", type: "subworkflow", config: { workflowId: "wf_child", mode: "once" } },
+      { title: "Agent", type: "ai_agent", config: { text: "Classify this ticket" } },
+    ]);
+    expect(warnings).toEqual([]);
   });
 });
 

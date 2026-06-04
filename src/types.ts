@@ -375,25 +375,6 @@ export interface BucketCollection {
   activeJobCount?: number;
 }
 
-export interface CollectionGrant {
-  id: string;
-  bucket_id?: string;
-  bucketId?: string;
-  collection_id?: string;
-  collectionId?: string;
-  subject_type?: "user" | "role";
-  subjectType?: "user" | "role";
-  subject_id?: string;
-  subjectId?: string;
-  permission: "search";
-}
-
-export interface CollectionGrantRequest {
-  subjectType: "user" | "role";
-  subjectId: string;
-  permission?: "search";
-}
-
 // ---- Bucket Context (Honcho-style single-call RAG) ----
 
 export interface BucketContextRequest {

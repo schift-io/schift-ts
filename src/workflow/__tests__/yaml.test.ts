@@ -119,6 +119,24 @@ describe("validateDefinition", () => {
     expect(errors.some((e) => e.includes("server-only"))).toBe(true);
   });
 
+  it.each(["gmail_trigger", "notion_trigger"])(
+    "warns that %s needs the API runtime",
+    (type) => {
+      const errors = validateDefinition({
+        ...minimalDef(),
+        blocks: [
+          { id: "start", type: "start" },
+          { id: "integration", type },
+        ],
+        edges: [{ source: "start", target: "integration" }],
+      });
+
+      expect(errors).toContain(
+        `Block 'integration' (type=${type}) is server-only; local SDK execution may not support it`,
+      );
+    },
+  );
+
   it("does not warn about Tier 1/2 block types", () => {
     const errors = validateDefinition(minimalDef());
     expect(errors.filter((e) => e.includes("server-only"))).toHaveLength(0);

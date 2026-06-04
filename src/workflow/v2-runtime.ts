@@ -59,6 +59,32 @@ export interface WorkflowV2HumanFormRequest extends WorkflowV2MiddlewareContext 
   schema: unknown;
 }
 
+export interface WorkflowV2HumanInputRequest extends WorkflowV2MiddlewareContext {
+  formSchema: unknown;
+  actions: unknown[];
+  delivery: unknown[];
+  timeout?: unknown;
+  resume: unknown;
+}
+
+export interface WorkflowV2DocumentExtractRequest extends WorkflowV2MiddlewareContext {
+  input: string;
+  mode: string;
+}
+
+export interface WorkflowV2ToolCallRequest extends WorkflowV2MiddlewareContext {
+  tool: string;
+  capability: string;
+  provider?: string;
+  dify?: {
+    providerType?: string;
+    pluginUniqueIdentifier?: string;
+    toolConfigurations?: Record<string, unknown>;
+    credentialId?: string;
+  };
+  parameters: Record<string, unknown>;
+}
+
 export interface WorkflowV2WaitRequest extends WorkflowV2MiddlewareContext {
   resume: string;
   amount?: number;
@@ -96,6 +122,18 @@ export interface WorkflowV2RuntimeMiddleware {
   ): MaybePromise<boolean | Record<string, unknown> | void>;
   requestForm?(
     request: WorkflowV2HumanFormRequest,
+  ): MaybePromise<Record<string, unknown> | void>;
+  requestHumanInput?(
+    request: WorkflowV2HumanInputRequest,
+  ): MaybePromise<Record<string, unknown> | void>;
+  extractDocument?(
+    request: WorkflowV2DocumentExtractRequest,
+  ): MaybePromise<Record<string, unknown> | void>;
+  callTool?(
+    request: WorkflowV2ToolCallRequest,
+  ): MaybePromise<Record<string, unknown> | void>;
+  executeDifyTool?(
+    request: WorkflowV2ToolCallRequest,
   ): MaybePromise<Record<string, unknown> | void>;
   wait?(
     request: WorkflowV2WaitRequest,
