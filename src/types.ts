@@ -74,6 +74,21 @@ export interface AuthUser {
   onboarded: boolean;
 }
 
+export interface CompanyCore {
+  id?: string;
+  orgId: string;
+  schemaVersion: string;
+  legalName: string;
+  representativeName?: string | null;
+  businessRegistrationNumber?: string | null;
+  headOfficeAddress?: string | null;
+  businessType?: string | null;
+  businessItem?: string | null;
+  metadata?: Record<string, unknown>;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface AuthOrg {
   id: string;
   name: string;
@@ -81,6 +96,7 @@ export interface AuthOrg {
   tier: string;
   region: string;
   role: string;
+  companyCore?: CompanyCore | null;
 }
 
 export interface AuthPendingInvite {
@@ -110,6 +126,59 @@ export interface AuthMeResponse {
   user: AuthUser;
   orgs: AuthOrg[];
   pendingInvites: AuthPendingInvite[];
+}
+
+export interface BusinessRegistration {
+  companyName: string;
+  representativeName?: string;
+  businessRegistrationNumber: string;
+  address?: string;
+  openingDate?: string;
+  certificateIssueDate?: string;
+  fileName?: string;
+}
+
+export interface OnboardingStateRequest {
+  orgId?: string;
+}
+
+export interface OnboardingStateUpdate {
+  orgId?: string;
+  step?: string;
+  selectedSources?: string[];
+  selectedAutomations?: string[];
+  businessRegistration?: BusinessRegistration;
+  [key: string]: unknown;
+}
+
+export interface OnboardingStateResponse {
+  ok: boolean;
+  orgId: string;
+  state: Record<string, unknown>;
+  companyCore?: CompanyCore | null;
+}
+
+export interface CompleteOnboardingRequest {
+  orgId: string;
+  selectedSources?: string[];
+  selectedAutomations?: string[];
+  businessRegistration: BusinessRegistration;
+  ownerConfirmed?: boolean;
+}
+
+export interface CompleteOnboardingResponse {
+  ok: boolean;
+  companyCore: CompanyCore;
+}
+
+export interface CompanyCoreUpdate {
+  legalName?: string | null;
+  representativeName?: string | null;
+  businessRegistrationNumber?: string | null;
+  headOfficeAddress?: string | null;
+  businessType?: string | null;
+  businessItem?: string | null;
+  metadata?: Record<string, unknown> | null;
 }
 
 export interface EmbedRequest {

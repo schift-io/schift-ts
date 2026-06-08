@@ -283,6 +283,12 @@ describe("Schift auth readiness client", () => {
               tier: "free",
               region: "seoul",
               role: "owner",
+              companyCore: {
+                orgId: "org_1",
+                schemaVersion: "company_core.v1",
+                legalName: "Smoke Org Ltd.",
+                businessRegistrationNumber: "123-45-67890",
+              },
             },
           ],
           pendingInvites: [],
@@ -297,6 +303,7 @@ describe("Schift auth readiness client", () => {
     );
 
     expect(me.user.id).toBe("usr_1");
+    expect(me.orgs[0].companyCore?.legalName).toBe("Smoke Org Ltd.");
     expect(mockFetch).toHaveBeenCalledWith(
       "http://127.0.0.1:8011/v1/auth/me",
       expect.objectContaining({
@@ -304,6 +311,141 @@ describe("Schift auth readiness client", () => {
         headers: expect.objectContaining({
           Authorization: "Bearer jwt_token",
           Accept: "application/json",
+        }),
+      }),
+    );
+  });
+
+  it("roundtrips onboarding state and company core through auth APIs", async () => {
+    const mockFetch = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+      const path = String(url).replace("http://127.0.0.1:8011", "");
+      if (path === "/v1/onboarding/state?orgId=org_1" && init?.method === "GET") {
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            orgId: "org_1",
+            state: { step: "business_registration" },
+            companyCore: {
+              orgId: "org_1",
+              schemaVersion: "company_core.v1",
+              legalName: "Draft Co",
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (path === "/v1/onboarding/state" && init?.method === "PUT") {
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            orgId: "org_1",
+            state: { step: "business_registration", status: "in_progress" },
+            companyCore: {
+              orgId: "org_1",
+              schemaVersion: "company_core.v1",
+              legalName: "Draft Co",
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (path === "/v1/onboarding/complete" && init?.method === "POST") {
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            companyCore: {
+              orgId: "org_1",
+              schemaVersion: "company_core.v1",
+              legalName: "Draft Co",
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (path === "/v1/organizations/org_1/company-core" && init?.method === "GET") {
+        return new Response(
+          JSON.stringify({
+            orgId: "org_1",
+            schemaVersion: "company_core.v1",
+            legalName: "Draft Co",
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (path === "/v1/organizations/org_1/company-core" && init?.method === "PUT") {
+        return new Response(
+          JSON.stringify({
+            orgId: "org_1",
+            schemaVersion: "company_core.v1",
+            legalName: "Updated Co",
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      return new Response("not found", { status: 404 });
+    });
+    globalThis.fetch = mockFetch as typeof fetch;
+
+    const auth = Schift.auth({ baseUrl: "http://127.0.0.1:8011" });
+    const token = "jwt_token";
+    await auth.getOnboardingState(token, { orgId: "org_1" });
+    await auth.updateOnboardingState(token, {
+      orgId: "org_1",
+      step: "business_registration",
+      businessRegistration: {
+        companyName: "Draft Co",
+        businessRegistrationNumber: "123-45-67890",
+      },
+    });
+    await auth.completeOnboarding(token, {
+      orgId: "org_1",
+      businessRegistration: {
+        companyName: "Draft Co",
+        businessRegistrationNumber: "123-45-67890",
+      },
+      selectedSources: ["gmail"],
+      ownerConfirmed: true,
+    });
+    await auth.getCompanyCore(token, "org_1");
+    const updated = await auth.updateCompanyCore(token, "org_1", {
+      legalName: "Updated Co",
+    });
+
+    expect(updated.legalName).toBe("Updated Co");
+    expect(mockFetch).toHaveBeenCalledWith(
+      "http://127.0.0.1:8011/v1/onboarding/state?orgId=org_1",
+      expect.objectContaining({
+        method: "GET",
+        headers: expect.objectContaining({ Authorization: "Bearer jwt_token" }),
+      }),
+    );
+    expect(mockFetch).toHaveBeenCalledWith(
+      "http://127.0.0.1:8011/v1/onboarding/state",
+      expect.objectContaining({
+        method: "PUT",
+        body: JSON.stringify({
+          orgId: "org_1",
+          step: "business_registration",
+          businessRegistration: {
+            companyName: "Draft Co",
+            businessRegistrationNumber: "123-45-67890",
+          },
+        }),
+      }),
+    );
+    expect(mockFetch).toHaveBeenCalledWith(
+      "http://127.0.0.1:8011/v1/onboarding/complete",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          orgId: "org_1",
+          selectedSources: ["gmail"],
+          selectedAutomations: [],
+          businessRegistration: {
+            companyName: "Draft Co",
+            businessRegistrationNumber: "123-45-67890",
+          },
+          ownerConfirmed: true,
         }),
       }),
     );

@@ -36,6 +36,13 @@ import type {
   AuthLoginRequest,
   AuthLoginResponse,
   AuthMeResponse,
+  CompanyCore,
+  CompanyCoreUpdate,
+  CompleteOnboardingRequest,
+  CompleteOnboardingResponse,
+  OnboardingStateRequest,
+  OnboardingStateResponse,
+  OnboardingStateUpdate,
 } from "./types.js";
 import { _recordResponseInActiveTracker } from "./tracker.js";
 import { WorkflowClient } from "./workflow/client.js";
@@ -112,16 +119,60 @@ export class SchiftAuth {
   }
 
   async me(token: string): Promise<AuthMeResponse> {
-    const resp = await fetch(`${this.baseUrl}/v1/auth/me`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
-        "User-Agent": `schift-ts/${VERSION}`,
+    return this.get<AuthMeResponse>("/v1/auth/me", token);
+  }
+
+  async getOnboardingState(
+    token: string,
+    request: OnboardingStateRequest = {},
+  ): Promise<OnboardingStateResponse> {
+    const params = request.orgId
+      ? `?${new URLSearchParams({ orgId: request.orgId }).toString()}`
+      : "";
+    return this.get<OnboardingStateResponse>(`/v1/onboarding/state${params}`, token);
+  }
+
+  async updateOnboardingState(
+    token: string,
+    request: OnboardingStateUpdate,
+  ): Promise<OnboardingStateResponse> {
+    return this.put<OnboardingStateResponse>("/v1/onboarding/state", token, request);
+  }
+
+  async completeOnboarding(
+    token: string,
+    request: CompleteOnboardingRequest,
+  ): Promise<CompleteOnboardingResponse> {
+    return this.post<CompleteOnboardingResponse>(
+      "/v1/onboarding/complete",
+      {
+        orgId: request.orgId,
+        selectedSources: request.selectedSources ?? [],
+        selectedAutomations: request.selectedAutomations ?? [],
+        businessRegistration: request.businessRegistration,
+        ownerConfirmed: request.ownerConfirmed ?? false,
       },
-      signal: AbortSignal.timeout(this.timeout),
-    });
-    return this.handleResponse<AuthMeResponse>(resp);
+      token,
+    );
+  }
+
+  async getCompanyCore(token: string, orgId: string): Promise<CompanyCore> {
+    return this.get<CompanyCore>(
+      `/v1/organizations/${encodeURIComponent(orgId)}/company-core`,
+      token,
+    );
+  }
+
+  async updateCompanyCore(
+    token: string,
+    orgId: string,
+    request: CompanyCoreUpdate,
+  ): Promise<CompanyCore> {
+    return this.put<CompanyCore>(
+      `/v1/organizations/${encodeURIComponent(orgId)}/company-core`,
+      token,
+      { ...request },
+    );
   }
 
   async health(): Promise<{ status: string; checks?: Record<string, unknown> }> {
@@ -139,10 +190,43 @@ export class SchiftAuth {
   private async post<T>(
     path: string,
     body: Record<string, unknown>,
+    token?: string,
   ): Promise<T> {
     const resp = await fetch(`${this.baseUrl}${path}`, {
       method: "POST",
       headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        "User-Agent": `schift-ts/${VERSION}`,
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(this.timeout),
+    });
+    return this.handleResponse<T>(resp);
+  }
+
+  private async get<T>(path: string, token: string): Promise<T> {
+    const resp = await fetch(`${this.baseUrl}${path}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+        "User-Agent": `schift-ts/${VERSION}`,
+      },
+      signal: AbortSignal.timeout(this.timeout),
+    });
+    return this.handleResponse<T>(resp);
+  }
+
+  private async put<T>(
+    path: string,
+    token: string,
+    body: Record<string, unknown>,
+  ): Promise<T> {
+    const resp = await fetch(`${this.baseUrl}${path}`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
         "User-Agent": `schift-ts/${VERSION}`,
       },
