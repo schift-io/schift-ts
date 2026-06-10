@@ -204,6 +204,30 @@ describe("Schift client search", () => {
       }),
     );
   });
+
+  it("keeps usage reads on public usage API paths", async () => {
+    const seen: Array<{ url: string; method?: string }> = [];
+    const mockFetch = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+      seen.push({ url: String(url), method: init?.method });
+      return new Response(JSON.stringify({ summary: { total_requests: 1 } }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+    globalThis.fetch = mockFetch as typeof fetch;
+
+    const client = new Schift({ apiKey: "sch_test" });
+    await client.usage();
+    await client.usageSummary();
+
+    expect(seen).toEqual([
+      { url: "https://api.schift.io/v1/usage/me", method: "GET" },
+      { url: "https://api.schift.io/v1/usage/current", method: "GET" },
+    ]);
+    expect(seen.map((call) => call.url).join("\n")).not.toMatch(
+      /billing\.|awp\.|company_core\.|\/v1\/billing\/invoices|\/v1\/awp\/versions/,
+    );
+  });
 });
 
 describe("Schift auth readiness client", () => {
@@ -447,6 +471,17 @@ describe("Schift auth readiness client", () => {
           },
           ownerConfirmed: true,
         }),
+      }),
+    );
+    expect(mockFetch).toHaveBeenCalledWith(
+      "http://127.0.0.1:8011/v1/organizations/org_1/company-core",
+      expect.objectContaining({ method: "GET" }),
+    );
+    expect(mockFetch).toHaveBeenCalledWith(
+      "http://127.0.0.1:8011/v1/organizations/org_1/company-core",
+      expect.objectContaining({
+        method: "PUT",
+        body: JSON.stringify({ legalName: "Updated Co" }),
       }),
     );
   });
