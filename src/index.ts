@@ -171,6 +171,17 @@ export type {
   AgentToolDef,
 } from "./agents/index.js";
 
+// ---- Document Agents (Agent Hub) ----
+export { AgentHubClient, DocumentAgent } from "./agent-hub/index.js";
+export type {
+  AgentHubAgentListing,
+  AgentHubArtifact,
+  AgentHubIntakeQuestion,
+  DocumentRunOptions,
+  DocumentRunResult,
+  IntakeHandler,
+} from "./agent-hub/index.js";
+
 // ---- Agent Framework ----
 export {
   Agent,

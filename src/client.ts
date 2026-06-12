@@ -53,6 +53,7 @@ import {
 } from "./workflow-v2/index.js";
 import type { WorkflowV2ArtifactInput } from "./workflow-v2/index.js";
 import { AgentsClient } from "./agents/client.js";
+import { AgentHubClient } from "./agent-hub/client.js";
 import { ProvidersClient } from "./providers/client.js";
 import { MigrateClient } from "./migrate/client.js";
 import { SchiftTools } from "./tools.js";
@@ -284,6 +285,21 @@ export class Schift {
   readonly agents: AgentsClient;
 
   /**
+   * Document Agent (Agent Hub) sub-client — run packaged document agents
+   * (bizplan / deck / cardnews / blank) through the Schift Cloud facade.
+   * Requires an API key with the `agents:documents:run` scope.
+   *
+   * @example
+   * ```ts
+   * const result = await client.agentHub.document("bizplan").run({
+   *   message: "전기차 충전 인프라 사업계획서를 만들어줘",
+   * });
+   * const markdown = result.artifacts.find((a) => a.format === "markdown");
+   * ```
+   */
+  readonly agentHub: AgentHubClient;
+
+  /**
    * Models sub-module — list and inspect available embedding models.
    *
    * @example
@@ -414,6 +430,7 @@ export class Schift {
 
     this.workflows = new WorkflowClient(this.transport);
     this.agents = new AgentsClient(this.transport);
+    this.agentHub = new AgentHubClient(this.transport);
     this.providers = new ProvidersClient(this.transport);
     this.migrate = new MigrateClient(this.transport);
 
